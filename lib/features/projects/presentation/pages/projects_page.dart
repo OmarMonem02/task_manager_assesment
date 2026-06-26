@@ -5,6 +5,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/routes/app_router.dart';
+import '../../../../core/theme/theme_context_extension.dart';
 import '../bloc/projects_bloc.dart';
 import '../bloc/projects_event.dart';
 import '../bloc/projects_state.dart';
@@ -61,22 +62,16 @@ class _ProjectsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final scheme = context.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: colors.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'My Projects',
-          style: TextStyle(
-            fontSize: 20.sp,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF1A1A2E),
-          ),
-        ),
+        title: const Text('My Projects'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline, color: Color(0xFF1A1A2E)),
+            icon: Icon(Icons.person_outline, color: colors.primaryText),
             onPressed: () => context.push(AppRouter.profile),
           ),
         ],
@@ -92,11 +87,11 @@ class _ProjectsView extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 48.r, color: Colors.red[300]),
+                  Icon(Icons.error_outline, size: 48.r, color: scheme.error),
                   SizedBox(height: 16.h),
                   Text(
                     state.message,
-                    style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 14.sp, color: colors.secondaryText),
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 16.h),
@@ -113,7 +108,7 @@ class _ProjectsView extends StatelessWidget {
 
           if (state is ProjectsEmpty) {
             return RefreshIndicator(
-              color: const Color(0xFF6C63FF),
+              color: scheme.primary,
               onRefresh: () async {
                 context.read<ProjectsBloc>().add(GetProjectsRequested());
               },
@@ -133,7 +128,7 @@ class _ProjectsView extends StatelessWidget {
 
           if (state is ProjectsLoaded) {
             return RefreshIndicator(
-              color: const Color(0xFF6C63FF),
+              color: scheme.primary,
               onRefresh: () async {
                 context.read<ProjectsBloc>().add(GetProjectsRequested());
               },
@@ -170,8 +165,7 @@ class _ProjectsView extends StatelessWidget {
           if (state is ProjectsLoaded || state is ProjectsEmpty || state is ProjectsError) {
             return FloatingActionButton(
               onPressed: () => _showCreateProjectSheet(context),
-              backgroundColor: const Color(0xFF6C63FF),
-              child: const Icon(Icons.add, color: Colors.white),
+              child: const Icon(Icons.add),
             );
           }
           return const SizedBox.shrink();
@@ -185,8 +179,7 @@ class _ProjectsView extends StatelessWidget {
       padding: EdgeInsets.all(16.r),
       itemCount: 6,
       separatorBuilder: (_, __) => SizedBox(height: 12.h),
-      itemBuilder: (_, __) => SkeletonCard(),
+      itemBuilder: (_, __) => const SkeletonCard(),
     );
   }
 }
-

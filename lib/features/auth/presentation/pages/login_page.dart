@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/routes/app_router.dart';
+import '../../../../core/theme/theme_context_extension.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -54,18 +55,21 @@ class _LoginViewState extends State<_LoginView> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final scheme = context.colorScheme;
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           context.go(AppRouter.projects);
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            SnackBar(content: Text(state.message)),
           );
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: colors.scaffoldBackground,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -75,29 +79,26 @@ class _LoginViewState extends State<_LoginView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 60.h),
-                  // Header
                   Text(
                     'Welcome Back 👋',
                     style: TextStyle(
                       fontSize: 28.sp,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1A1A2E),
+                      color: colors.primaryText,
                     ),
                   ),
                   SizedBox(height: 8.h),
                   Text(
                     'Sign in to continue',
-                    style: TextStyle(fontSize: 16.sp, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 16.sp, color: colors.secondaryText),
                   ),
                   SizedBox(height: 48.h),
-
-                  // Username Field
                   Text(
                     'Username',
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1A1A2E),
+                      color: colors.primaryText,
                     ),
                   ),
                   SizedBox(height: 8.h),
@@ -105,6 +106,7 @@ class _LoginViewState extends State<_LoginView> {
                     controller: _usernameController,
                     keyboardType: TextInputType.text,
                     decoration: inputDecoration(
+                      context,
                       hint: 'Enter your username',
                       icon: Icons.person_outline,
                     ),
@@ -116,14 +118,12 @@ class _LoginViewState extends State<_LoginView> {
                     },
                   ),
                   SizedBox(height: 20.h),
-
-                  // Password Field
                   Text(
                     'Password',
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1A1A2E),
+                      color: colors.primaryText,
                     ),
                   ),
                   SizedBox(height: 8.h),
@@ -131,6 +131,7 @@ class _LoginViewState extends State<_LoginView> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: inputDecoration(
+                      context,
                       hint: 'Enter your password',
                       icon: Icons.lock_outline,
                       suffix: IconButton(
@@ -138,7 +139,7 @@ class _LoginViewState extends State<_LoginView> {
                           _obscurePassword
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
-                          color: Colors.grey,
+                          color: colors.iconMuted,
                         ),
                         onPressed: () => setState(
                           () => _obscurePassword = !_obscurePassword,
@@ -153,8 +154,6 @@ class _LoginViewState extends State<_LoginView> {
                     },
                   ),
                   SizedBox(height: 40.h),
-
-                  // Login Button
                   BlocBuilder<AuthBloc, AuthState>(
                     builder: (context, state) {
                       final isLoading = state is AuthLoading;
@@ -163,20 +162,12 @@ class _LoginViewState extends State<_LoginView> {
                         height: 52.h,
                         child: ElevatedButton(
                           onPressed: isLoading ? null : () => _onLogin(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6C63FF),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            elevation: 0,
-                          ),
                           child: isLoading
                               ? SizedBox(
                                   width: 24.w,
                                   height: 24.h,
-                                  child: const CircularProgressIndicator(
-                                    color: Colors.white,
+                                  child: CircularProgressIndicator(
+                                    color: scheme.onPrimary,
                                     strokeWidth: 2,
                                   ),
                                 )
@@ -191,7 +182,6 @@ class _LoginViewState extends State<_LoginView> {
                       );
                     },
                   ),
-
                   SizedBox(height: 14.h),
                   Center(
                     child: Row(
@@ -201,14 +191,14 @@ class _LoginViewState extends State<_LoginView> {
                           'Don\'t have an account?',
                           style: TextStyle(
                             fontSize: 12.sp,
-                            color: Colors.grey[500],
+                            color: colors.secondaryText,
                           ),
                         ),
                         TextButton(
                           onPressed: () => context.go(AppRouter.register),
                           child: Text(
                             'Sign up',
-                            style: TextStyle(color: Colors.blue),
+                            style: TextStyle(color: scheme.primary),
                           ),
                         ),
                       ],
@@ -220,7 +210,7 @@ class _LoginViewState extends State<_LoginView> {
                       'Use this dummy credentials to login:',
                       style: TextStyle(
                         fontSize: 12.sp,
-                        color: Colors.grey[500],
+                        color: colors.secondaryText,
                       ),
                     ),
                   ),
@@ -229,7 +219,7 @@ class _LoginViewState extends State<_LoginView> {
                       'emilys / emilyspass',
                       style: TextStyle(
                         fontSize: 12.sp,
-                        color: Colors.grey[500],
+                        color: colors.secondaryText,
                       ),
                     ),
                   ),
@@ -238,7 +228,7 @@ class _LoginViewState extends State<_LoginView> {
                       'emmaj  / emmajpass',
                       style: TextStyle(
                         fontSize: 12.sp,
-                        color: Colors.grey[500],
+                        color: colors.secondaryText,
                       ),
                     ),
                   ),

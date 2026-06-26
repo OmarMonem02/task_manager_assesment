@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'core/di/dependency_injection.dart';
 import 'core/routes/app_router.dart';
+import 'core/theme/app_theme.dart';
+import 'features/theme/presentation/cubit/theme_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await setupDependencies();
-  runApp(const MyApp());
+  final themeCubit = sl<ThemeCubit>();
+  await themeCubit.loadTheme();
+  runApp(BlocProvider.value(value: themeCubit, child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -19,14 +24,17 @@ class MyApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (_, child) {
-        return MaterialApp.router(
-          title: 'Task Manager',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6C63FF)),
-            useMaterial3: true,
-          ),
-          routerConfig: AppRouter.router,
+        return BlocBuilder<ThemeCubit, ThemeMode>(
+          builder: (context, themeMode) {
+            return MaterialApp.router(
+              title: 'Task Manager',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light(),
+              darkTheme: AppTheme.dark(),
+              themeMode: themeMode,
+              routerConfig: AppRouter.router,
+            );
+          },
         );
       },
     );

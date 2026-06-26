@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../auth/presentation/widgets/input_decoration.dart';
+import '../../../../core/theme/theme_context_extension.dart';
 
 class AddProjectBottomSheet extends StatefulWidget {
   final void Function(String name, String description) onAdd;
@@ -34,6 +36,8 @@ class _AddProjectBottomSheetState extends State<AddProjectBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -41,7 +45,7 @@ class _AddProjectBottomSheetState extends State<AddProjectBottomSheet> {
       child: Container(
         padding: EdgeInsets.all(24.r),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
         ),
         child: Form(
@@ -55,7 +59,7 @@ class _AddProjectBottomSheetState extends State<AddProjectBottomSheet> {
                   width: 36.w,
                   height: 4.h,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: colors.divider,
                     borderRadius: BorderRadius.circular(2.r),
                   ),
                 ),
@@ -66,14 +70,14 @@ class _AddProjectBottomSheetState extends State<AddProjectBottomSheet> {
                 style: TextStyle(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1A1A2E),
+                  color: colors.primaryText,
                 ),
               ),
               SizedBox(height: 16.h),
               TextFormField(
                 controller: _nameController,
                 autofocus: true,
-                decoration: _inputDecoration('Project name...'),
+                decoration: sheetInputDecoration(context, 'Project name...'),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Please enter a project name';
@@ -85,7 +89,7 @@ class _AddProjectBottomSheetState extends State<AddProjectBottomSheet> {
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 3,
-                decoration: _inputDecoration('Description (optional)'),
+                decoration: sheetInputDecoration(context, 'Description (optional)'),
               ),
               SizedBox(height: 16.h),
               SizedBox(
@@ -93,14 +97,6 @@ class _AddProjectBottomSheetState extends State<AddProjectBottomSheet> {
                 height: 50.h,
                 child: ElevatedButton(
                   onPressed: _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    elevation: 0,
-                  ),
                   child: Text(
                     'Create Project',
                     style: TextStyle(
@@ -114,30 +110,6 @@ class _AddProjectBottomSheetState extends State<AddProjectBottomSheet> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14.sp),
-      filled: true,
-      fillColor: const Color(0xFFF5F5F5),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: const BorderSide(
-          color: Color(0xFF6C63FF),
-          width: 1.5,
-        ),
-      ),
-      contentPadding: EdgeInsets.symmetric(
-        horizontal: 16.w,
-        vertical: 14.h,
       ),
     );
   }

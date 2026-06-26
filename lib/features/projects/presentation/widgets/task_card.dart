@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/theme_context_extension.dart';
 import '../../domain/entities/task_entity.dart';
 
 class TaskCard extends StatelessWidget {
@@ -17,11 +19,11 @@ class TaskCard extends StatelessWidget {
   Color _statusColor() {
     switch (task.status) {
       case TaskStatus.done:
-        return Colors.green;
+        return AppColors.statusCompleted;
       case TaskStatus.inProgress:
-        return Colors.orange;
+        return AppColors.statusInProgress;
       case TaskStatus.pending:
-        return Colors.grey;
+        return AppColors.statusPending;
     }
   }
 
@@ -39,24 +41,27 @@ class TaskCard extends StatelessWidget {
   Color _priorityColor() {
     switch (task.priority.toLowerCase()) {
       case 'high':
-        return Colors.red;
+        return AppColors.priorityHigh;
       case 'low':
-        return Colors.blue;
+        return AppColors.priorityLow;
       default:
-        return Colors.purple;
+        return AppColors.priorityMedium;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final scheme = context.colorScheme;
+
     return Container(
       padding: EdgeInsets.all(14.r),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: colors.cardShadow,
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -72,18 +77,14 @@ class TaskCard extends StatelessWidget {
               height: 22.r,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: task.completed
-                    ? const Color(0xFF6C63FF)
-                    : Colors.transparent,
+                color: task.completed ? scheme.primary : Colors.transparent,
                 border: Border.all(
-                  color: task.completed
-                      ? const Color(0xFF6C63FF)
-                      : Colors.grey[300]!,
+                  color: task.completed ? scheme.primary : colors.divider,
                   width: 2,
                 ),
               ),
               child: task.completed
-                  ? Icon(Icons.check, size: 14.r, color: Colors.white)
+                  ? Icon(Icons.check, size: 14.r, color: scheme.onPrimary)
                   : null,
             ),
           ),
@@ -97,8 +98,8 @@ class TaskCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14.sp,
                     color: task.completed
-                        ? Colors.grey[400]
-                        : const Color(0xFF1A1A2E),
+                        ? colors.iconMuted
+                        : colors.primaryText,
                     decoration:
                         task.completed ? TextDecoration.lineThrough : null,
                     fontWeight: FontWeight.w500,
@@ -151,7 +152,7 @@ class TaskCard extends StatelessWidget {
           ),
           if (onDelete != null)
             IconButton(
-              icon: Icon(Icons.delete_outline, color: Colors.red[300]),
+              icon: Icon(Icons.delete_outline, color: scheme.error),
               onPressed: onDelete,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),

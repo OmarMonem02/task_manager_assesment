@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/theme_context_extension.dart';
 import '../../domain/entities/project_entity.dart';
 
 class ProjectCard extends StatelessWidget {
@@ -20,17 +22,20 @@ class ProjectCard extends StatelessWidget {
   Color _statusColor() {
     switch (project.status.toLowerCase()) {
       case 'completed':
-        return Colors.green;
+        return AppColors.statusCompleted;
       case 'in progress':
-        return Colors.orange;
+        return AppColors.statusInProgress;
       default:
-        return Colors.grey;
+        return AppColors.statusPending;
     }
   }
 
-  Widget _buildCardContent() {
+  Widget _buildCardContent(BuildContext context) {
+    final colors = context.appColors;
+    final scheme = context.colorScheme;
+
     return Material(
-      color: Colors.white,
+      color: colors.surface,
       borderRadius: BorderRadius.circular(12.r),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -40,7 +45,7 @@ class ProjectCard extends StatelessWidget {
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: colors.cardShadow,
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -53,7 +58,7 @@ class ProjectCard extends StatelessWidget {
                 width: 44.r,
                 height: 44.r,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                  color: scheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10.r),
                 ),
                 child: Center(
@@ -64,7 +69,7 @@ class ProjectCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF6C63FF),
+                      color: scheme.primary,
                     ),
                   ),
                 ),
@@ -79,7 +84,7 @@ class ProjectCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1A1A2E),
+                        color: colors.primaryText,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -90,7 +95,7 @@ class ProjectCard extends StatelessWidget {
                         project.description,
                         style: TextStyle(
                           fontSize: 12.sp,
-                          color: Colors.grey[600],
+                          color: colors.secondaryText,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -121,7 +126,7 @@ class ProjectCard extends StatelessWidget {
                 child: Icon(
                   Icons.arrow_forward_ios,
                   size: 14.r,
-                  color: Colors.grey[400],
+                  color: colors.iconMuted,
                 ),
               ),
             ],
@@ -134,8 +139,10 @@ class ProjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (onConfirmDelete == null || onDelete == null) {
-      return _buildCardContent();
+      return _buildCardContent(context);
     }
+
+    final scheme = context.colorScheme;
 
     return Slidable(
       key: ValueKey(project.id),
@@ -153,8 +160,8 @@ class ProjectCard extends StatelessWidget {
                 onDelete!();
               }
             },
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+            backgroundColor: scheme.error,
+            foregroundColor: scheme.onError,
             icon: Icons.delete_outline,
             label: 'Delete',
             borderRadius: BorderRadius.horizontal(
@@ -163,7 +170,7 @@ class ProjectCard extends StatelessWidget {
           ),
         ],
       ),
-      child: _buildCardContent(),
+      child: _buildCardContent(context),
     );
   }
 }

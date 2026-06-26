@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/routes/app_router.dart';
+import '../../../../core/theme/theme_context_extension.dart';
+import '../../../theme/presentation/widgets/theme_mode_tile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
@@ -26,42 +28,33 @@ class _ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final scheme = context.colorScheme;
+
     return BlocListener<ProfileBloc, ProfileState>(
       listener: (context, state) {
         if (state is ProfileLogoutSuccess) {
           context.go(AppRouter.login);
         } else if (state is ProfileLoaded && state.snackbarMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.snackbarMessage!),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text(state.snackbarMessage!)),
           );
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: colors.scaffoldBackground,
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
+            icon: Icon(Icons.arrow_back, color: colors.primaryText),
             onPressed: () => context.pop(),
           ),
-          title: Text(
-            'Profile',
-            style: TextStyle(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1A1A2E),
-            ),
-          ),
+          title: Text('Profile'),
         ),
         body: BlocBuilder<ProfileBloc, ProfileState>(
           builder: (context, state) {
             if (state is ProfileLoading) {
-              return const Center(
-                child: CircularProgressIndicator(color: Color(0xFF6C63FF)),
+              return Center(
+                child: CircularProgressIndicator(color: scheme.primary),
               );
             }
 
@@ -70,11 +63,11 @@ class _ProfileView extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, size: 48.r, color: Colors.red[300]),
+                    Icon(Icons.error_outline, size: 48.r, color: scheme.error),
                     SizedBox(height: 16.h),
                     Text(
                       state.message,
-                      style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 14.sp, color: colors.secondaryText),
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: 16.h),
@@ -82,14 +75,6 @@ class _ProfileView extends StatelessWidget {
                       onPressed: () {
                         context.read<ProfileBloc>().add(LoadProfileRequested());
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C63FF),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                      ),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -126,6 +111,8 @@ class _ProfileView extends StatelessWidget {
             value: state.profile.email,
             icon: Icons.email_outlined,
           ),
+          SizedBox(height: 12.h),
+          const ThemeModeTile(),
           SizedBox(height: 32.h),
           SizedBox(
             width: double.infinity,
@@ -134,17 +121,17 @@ class _ProfileView extends StatelessWidget {
               onPressed: () {
                 context.read<ProfileBloc>().add(LogoutRequested());
               },
-              icon: const Icon(Icons.logout, color: Colors.red),
+              icon: Icon(Icons.logout, color: context.colorScheme.error),
               label: Text(
                 'Logout',
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
-                  color: Colors.red,
+                  color: context.colorScheme.error,
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.red),
+                side: BorderSide(color: context.colorScheme.error),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r),
                 ),
@@ -170,15 +157,18 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final scheme = context.colorScheme;
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: colors.cardShadow,
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -186,7 +176,7 @@ class _InfoCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFF6C63FF), size: 24.r),
+          Icon(icon, color: scheme.primary, size: 24.r),
           SizedBox(width: 16.w),
           Expanded(
             child: Column(
@@ -196,7 +186,7 @@ class _InfoCard extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontSize: 12.sp,
-                    color: Colors.grey[500],
+                    color: colors.secondaryText,
                   ),
                 ),
                 SizedBox(height: 4.h),
@@ -205,7 +195,7 @@ class _InfoCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1A1A2E),
+                    color: colors.primaryText,
                   ),
                 ),
               ],

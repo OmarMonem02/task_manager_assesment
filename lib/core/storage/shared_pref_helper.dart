@@ -8,6 +8,7 @@ class SharedPrefHelper {
   static const String _userIdKey = 'user_id';
   static const String _usernameKey = 'username';
   static const String _emailKey = 'email';
+  static const String _themeModeKey = 'theme_mode';
 
   static Future<void> saveAccessToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -54,6 +55,25 @@ class SharedPrefHelper {
     final email = prefs.getString(_emailKey);
     if (username == null || email == null) return null;
     return {'username': username, 'email': email};
+  }
+
+  static Future<void> saveThemeMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeModeKey, mode);
+  }
+
+  static Future<String?> getThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_themeModeKey);
+  }
+
+  static Future<void> clearAuthData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_accessTokenKey);
+    await prefs.remove(_refreshTokenKey);
+    await prefs.remove(_userIdKey);
+    await prefs.remove(_usernameKey);
+    await prefs.remove(_emailKey);
   }
 
   static Future<void> clearAll() async {

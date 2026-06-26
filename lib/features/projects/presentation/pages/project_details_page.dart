@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/theme_context_extension.dart';
 import '../../domain/entities/project_entity.dart';
 import '../../domain/entities/task_entity.dart';
 import '../../domain/utils/project_status_helper.dart';
@@ -72,55 +74,48 @@ class _ProjectDetailsView extends StatelessWidget {
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
       case 'completed':
-        return Colors.green;
+        return AppColors.statusCompleted;
       case 'in progress':
-        return Colors.orange;
+        return AppColors.statusInProgress;
       default:
-        return Colors.grey;
+        return AppColors.statusPending;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final scheme = context.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: colors.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1A1A2E)),
+          icon: Icon(Icons.arrow_back_ios, color: colors.primaryText, size: 20.r),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           project.name,
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF1A1A2E),
-          ),
+          style: TextStyle(fontSize: 16.sp),
           overflow: TextOverflow.ellipsis,
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddTask(context),
-        backgroundColor: const Color(0xFF6C63FF),
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add),
       ),
       body: BlocConsumer<ProjectsBloc, ProjectsState>(
         listener: (context, state) {
           if (state is ProjectsError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
+              SnackBar(content: Text(state.message)),
             );
           }
         },
         builder: (context, state) {
           if (state is TasksLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF6C63FF)),
+            return Center(
+              child: CircularProgressIndicator(color: scheme.primary),
             );
           }
 
@@ -137,7 +132,7 @@ class _ProjectDetailsView extends StatelessWidget {
 
           if (tasks.isEmpty && state is! TasksLoading) {
             return RefreshIndicator(
-              color: const Color(0xFF6C63FF),
+              color: scheme.primary,
               onRefresh: () async {
                 context
                     .read<ProjectsBloc>()
@@ -146,7 +141,7 @@ class _ProjectDetailsView extends StatelessWidget {
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  _buildProjectHeader(projectStatus),
+                  _buildProjectHeader(context, projectStatus),
                   SizedBox(
                     height: MediaQuery.of(context).size.height * 0.35,
                     child: Center(
@@ -154,13 +149,13 @@ class _ProjectDetailsView extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.task_outlined,
-                              size: 64.r, color: Colors.grey[300]),
+                              size: 64.r, color: colors.iconMuted),
                           SizedBox(height: 16.h),
                           Text(
                             'No tasks yet',
                             style: TextStyle(
                               fontSize: 16.sp,
-                              color: Colors.grey[500],
+                              color: colors.secondaryText,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -169,7 +164,7 @@ class _ProjectDetailsView extends StatelessWidget {
                             'Tap + to add your first task',
                             style: TextStyle(
                               fontSize: 13.sp,
-                              color: Colors.grey[400],
+                              color: colors.iconMuted,
                             ),
                           ),
                         ],
@@ -185,7 +180,7 @@ class _ProjectDetailsView extends StatelessWidget {
           final total = tasks.length;
 
           return RefreshIndicator(
-            color: const Color(0xFF6C63FF),
+            color: scheme.primary,
             onRefresh: () async {
               context
                   .read<ProjectsBloc>()
@@ -194,12 +189,12 @@ class _ProjectDetailsView extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.fromLTRB(16.r, 0, 16.r, 100.r),
               children: [
-                _buildProjectHeader(projectStatus),
+                _buildProjectHeader(context, projectStatus),
                 Container(
                   margin: EdgeInsets.only(bottom: 16.r),
                   padding: EdgeInsets.all(16.r),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: colors.surface,
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Column(
@@ -213,14 +208,14 @@ class _ProjectDetailsView extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1A1A2E),
+                              color: colors.primaryText,
                             ),
                           ),
                           Text(
                             '$done / $total',
                             style: TextStyle(
                               fontSize: 14.sp,
-                              color: const Color(0xFF6C63FF),
+                              color: scheme.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -231,8 +226,8 @@ class _ProjectDetailsView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4.r),
                         child: LinearProgressIndicator(
                           value: total == 0 ? 0 : done / total,
-                          backgroundColor: Colors.grey[100],
-                          color: const Color(0xFF6C63FF),
+                          backgroundColor: colors.skeletonHighlight,
+                          color: scheme.primary,
                           minHeight: 6.h,
                         ),
                       ),
@@ -261,12 +256,14 @@ class _ProjectDetailsView extends StatelessWidget {
     );
   }
 
-  Widget _buildProjectHeader(String projectStatus) {
+  Widget _buildProjectHeader(BuildContext context, String projectStatus) {
+    final colors = context.appColors;
+
     return Container(
       margin: EdgeInsets.fromLTRB(0, 16.r, 0, 12.r),
       padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(
@@ -275,7 +272,7 @@ class _ProjectDetailsView extends StatelessWidget {
           if (project.description.isNotEmpty) ...[
             Text(
               project.description,
-              style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 13.sp, color: colors.secondaryText),
             ),
             SizedBox(height: 10.h),
           ],

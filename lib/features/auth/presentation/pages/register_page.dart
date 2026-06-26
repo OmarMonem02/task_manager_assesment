@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/routes/app_router.dart';
+import '../../../../core/theme/theme_context_extension.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -43,8 +44,6 @@ class _RegisterViewState extends State<_RegisterView> {
     _passwordController.dispose();
     _emailController.dispose();
     _confirmPasswordController.dispose();
-    _obscurePassword = true;
-    _obscureConfirmPassword = true;
     super.dispose();
   }
 
@@ -62,6 +61,9 @@ class _RegisterViewState extends State<_RegisterView> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final scheme = context.colorScheme;
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
@@ -79,14 +81,13 @@ class _RegisterViewState extends State<_RegisterView> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: colors.scaffoldBackground,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -96,21 +97,20 @@ class _RegisterViewState extends State<_RegisterView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 40.h),
-                  // Header
                   Text(
                     'Welcome to Task Manager 👋',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 24.sp,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1A1A2E),
+                      color: colors.primaryText,
                     ),
                   ),
                   SizedBox(height: 4.h),
                   Text(
                     textAlign: TextAlign.center,
                     'Create an account to start managing your tasks',
-                    style: TextStyle(fontSize: 16.sp, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 16.sp, color: colors.secondaryText),
                   ),
                   SizedBox(height: 28.h),
                   Text(
@@ -118,7 +118,7 @@ class _RegisterViewState extends State<_RegisterView> {
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1A1A2E),
+                      color: colors.primaryText,
                     ),
                   ),
                   SizedBox(height: 4.h),
@@ -126,6 +126,7 @@ class _RegisterViewState extends State<_RegisterView> {
                     controller: _usernameController,
                     keyboardType: TextInputType.text,
                     decoration: inputDecoration(
+                      context,
                       hint: 'Enter your username',
                       icon: Icons.person_outline,
                     ),
@@ -136,14 +137,13 @@ class _RegisterViewState extends State<_RegisterView> {
                       return null;
                     },
                   ),
-
                   SizedBox(height: 16.h),
                   Text(
                     'Email',
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1A1A2E),
+                      color: colors.primaryText,
                     ),
                   ),
                   SizedBox(height: 4.h),
@@ -151,6 +151,7 @@ class _RegisterViewState extends State<_RegisterView> {
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: inputDecoration(
+                      context,
                       hint: 'Enter your email',
                       icon: Icons.email_outlined,
                     ),
@@ -161,14 +162,13 @@ class _RegisterViewState extends State<_RegisterView> {
                       return null;
                     },
                   ),
-
                   SizedBox(height: 16.h),
                   Text(
                     'Password',
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1A1A2E),
+                      color: colors.primaryText,
                     ),
                   ),
                   SizedBox(height: 4.h),
@@ -176,6 +176,7 @@ class _RegisterViewState extends State<_RegisterView> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: inputDecoration(
+                      context,
                       hint: 'Enter your password',
                       icon: Icons.lock_outline,
                       suffix: IconButton(
@@ -183,7 +184,7 @@ class _RegisterViewState extends State<_RegisterView> {
                           _obscurePassword
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
-                          color: Colors.grey,
+                          color: colors.iconMuted,
                         ),
                         onPressed: () => setState(
                           () => _obscurePassword = !_obscurePassword,
@@ -203,7 +204,7 @@ class _RegisterViewState extends State<_RegisterView> {
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1A1A2E),
+                      color: colors.primaryText,
                     ),
                   ),
                   SizedBox(height: 4.h),
@@ -211,6 +212,7 @@ class _RegisterViewState extends State<_RegisterView> {
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
                     decoration: inputDecoration(
+                      context,
                       hint: 'Enter your confirm password',
                       icon: Icons.lock_outline,
                       suffix: IconButton(
@@ -218,7 +220,7 @@ class _RegisterViewState extends State<_RegisterView> {
                           _obscureConfirmPassword
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
-                          color: Colors.grey,
+                          color: colors.iconMuted,
                         ),
                         onPressed: () => setState(
                           () => _obscureConfirmPassword =
@@ -237,8 +239,6 @@ class _RegisterViewState extends State<_RegisterView> {
                     },
                   ),
                   SizedBox(height: 30.h),
-
-                  // Register Button
                   BlocBuilder<AuthBloc, AuthState>(
                     builder: (context, state) {
                       final isLoading = state is AuthLoading;
@@ -249,20 +249,12 @@ class _RegisterViewState extends State<_RegisterView> {
                           onPressed: isLoading
                               ? null
                               : () => _onRegister(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6C63FF),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            elevation: 0,
-                          ),
                           child: isLoading
                               ? SizedBox(
                                   width: 24.w,
                                   height: 24.h,
-                                  child: const CircularProgressIndicator(
-                                    color: Colors.white,
+                                  child: CircularProgressIndicator(
+                                    color: scheme.onPrimary,
                                     strokeWidth: 2,
                                   ),
                                 )
@@ -277,10 +269,7 @@ class _RegisterViewState extends State<_RegisterView> {
                       );
                     },
                   ),
-
                   SizedBox(height: 14.h),
-
-                  // Hint
                   Center(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -289,14 +278,14 @@ class _RegisterViewState extends State<_RegisterView> {
                           'Already have an account?',
                           style: TextStyle(
                             fontSize: 12.sp,
-                            color: Colors.grey[500],
+                            color: colors.secondaryText,
                           ),
                         ),
                         TextButton(
                           onPressed: () => context.go(AppRouter.login),
                           child: Text(
                             'Sign in',
-                            style: TextStyle(color: Colors.blue),
+                            style: TextStyle(color: scheme.primary),
                           ),
                         ),
                       ],
@@ -318,7 +307,7 @@ class _RegisterViewState extends State<_RegisterView> {
                             "This is dummy function for register, adding a new user will not add it into the server.",
                             style: TextStyle(
                               fontSize: 12.sp,
-                              color: Colors.grey[500],
+                              color: colors.secondaryText,
                             ),
                           ),
                         ),

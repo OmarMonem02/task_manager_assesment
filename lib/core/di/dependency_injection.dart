@@ -25,6 +25,12 @@ import '../../features/projects/domain/usecases/create_project_usecase.dart';
 import '../../features/projects/domain/usecases/get_projects_usecase.dart';
 import '../../features/projects/domain/usecases/mark_task_done_usecase.dart';
 import '../../features/projects/presentation/bloc/projects_bloc.dart';
+import '../../features/theme/data/datasources/theme_local_datasource.dart';
+import '../../features/theme/data/repositories/theme_repository_impl.dart';
+import '../../features/theme/domain/repositories/theme_repository.dart';
+import '../../features/theme/domain/usecases/get_theme_mode_usecase.dart';
+import '../../features/theme/domain/usecases/set_theme_mode_usecase.dart';
+import '../../features/theme/presentation/cubit/theme_cubit.dart';
 
 final sl = GetIt.instance;
 
@@ -118,6 +124,28 @@ Future<void> setupDependencies() async {
       addTaskUseCase: sl(),
       markTaskDoneUseCase: sl(),
       deleteTaskUseCase: sl(),
+    ),
+  );
+
+  // ─── Theme DataSources ─────────────────────────────────────────────────
+  sl.registerLazySingleton<ThemeLocalDataSource>(
+    () => ThemeLocalDataSourceImpl(),
+  );
+
+  // ─── Theme Repository ──────────────────────────────────────────────────
+  sl.registerLazySingleton<ThemeRepository>(
+    () => ThemeRepositoryImpl(localDataSource: sl()),
+  );
+
+  // ─── Theme Use Cases ───────────────────────────────────────────────────
+  sl.registerLazySingleton(() => GetThemeModeUseCase(sl()));
+  sl.registerLazySingleton(() => SetThemeModeUseCase(sl()));
+
+  // ─── Theme Cubit ───────────────────────────────────────────────────────
+  sl.registerLazySingleton(
+    () => ThemeCubit(
+      getThemeModeUseCase: sl(),
+      setThemeModeUseCase: sl(),
     ),
   );
 }

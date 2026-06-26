@@ -66,6 +66,6 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<void> clearTokens() async {
-    await SharedPrefHelper.clearAll();
+    await SharedPrefHelper.clearAuthData();
   }
 }

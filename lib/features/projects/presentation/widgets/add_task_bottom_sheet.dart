@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../auth/presentation/widgets/input_decoration.dart';
+import '../../../../core/theme/theme_context_extension.dart';
 
 class AddTaskBottomSheet extends StatefulWidget {
   final int projectId;
@@ -35,6 +37,8 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -42,7 +46,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
       child: Container(
         padding: EdgeInsets.all(24.r),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
         ),
         child: Form(
@@ -56,7 +60,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                   width: 36.w,
                   height: 4.h,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: colors.divider,
                     borderRadius: BorderRadius.circular(2.r),
                   ),
                 ),
@@ -67,14 +71,14 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                 style: TextStyle(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1A1A2E),
+                  color: colors.primaryText,
                 ),
               ),
               SizedBox(height: 16.h),
               TextFormField(
                 controller: _controller,
                 autofocus: true,
-                decoration: _inputDecoration('Task title...'),
+                decoration: sheetInputDecoration(context, 'Task title...'),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Please enter a task title';
@@ -88,13 +92,13 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
+                  color: colors.secondaryText,
                 ),
               ),
               SizedBox(height: 8.h),
               DropdownButtonFormField<String>(
                 initialValue: _priority,
-                decoration: _inputDecoration('Select priority'),
+                decoration: sheetInputDecoration(context, 'Select priority'),
                 items: const [
                   DropdownMenuItem(value: 'Low', child: Text('Low')),
                   DropdownMenuItem(value: 'Medium', child: Text('Medium')),
@@ -110,14 +114,6 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                 height: 50.h,
                 child: ElevatedButton(
                   onPressed: _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    elevation: 0,
-                  ),
                   child: Text(
                     'Add Task',
                     style: TextStyle(
@@ -131,30 +127,6 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14.sp),
-      filled: true,
-      fillColor: const Color(0xFFF5F5F5),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: const BorderSide(
-          color: Color(0xFF6C63FF),
-          width: 1.5,
-        ),
-      ),
-      contentPadding: EdgeInsets.symmetric(
-        horizontal: 16.w,
-        vertical: 14.h,
       ),
     );
   }
