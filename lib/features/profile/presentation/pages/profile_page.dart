@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/routes/app_router.dart';
 import '../../../../core/theme/theme_context_extension.dart';
+import '../../../../core/utils/app_snackbar.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_error.dart';
+import '../../../../core/widgets/app_loading.dart';
 import '../../../theme/presentation/widgets/theme_mode_tile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
@@ -29,16 +33,13 @@ class _ProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final scheme = context.colorScheme;
 
     return BlocListener<ProfileBloc, ProfileState>(
       listener: (context, state) {
         if (state is ProfileLogoutSuccess) {
           context.go(AppRouter.login);
         } else if (state is ProfileLoaded && state.snackbarMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.snackbarMessage!)),
-          );
+          AppSnackBar.showError(context, state.snackbarMessage!);
         }
       },
       child: Scaffold(
@@ -48,37 +49,20 @@ class _ProfileView extends StatelessWidget {
             icon: Icon(Icons.arrow_back, color: colors.primaryText),
             onPressed: () => context.pop(),
           ),
-          title: Text('Profile'),
+          title: const Text('Profile'),
         ),
         body: BlocBuilder<ProfileBloc, ProfileState>(
           builder: (context, state) {
             if (state is ProfileLoading) {
-              return Center(
-                child: CircularProgressIndicator(color: scheme.primary),
-              );
+              return const AppLoadingView();
             }
 
             if (state is ProfileError && state.message != 'Failed to logout') {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 48.r, color: scheme.error),
-                    SizedBox(height: 16.h),
-                    Text(
-                      state.message,
-                      style: TextStyle(fontSize: 14.sp, color: colors.secondaryText),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 16.h),
-                    ElevatedButton(
-                      onPressed: () {
-                        context.read<ProfileBloc>().add(LoadProfileRequested());
-                      },
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
+              return AppErrorView(
+                message: state.message,
+                onRetry: () {
+                  context.read<ProfileBloc>().add(LoadProfileRequested());
+                },
               );
             }
 
@@ -145,35 +129,23 @@ class _ProfileView extends StatelessWidget {
 }
 
 class _InfoCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
   const _InfoCard({
     required this.label,
     required this.value,
     required this.icon,
   });
 
+  final String label;
+  final String value;
+  final IconData icon;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final scheme = context.colorScheme;
 
-    return Container(
-      width: double.infinity,
+    return AppCard(
       padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: colors.cardShadow,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: Row(
         children: [
           Icon(icon, color: scheme.primary, size: 24.r),

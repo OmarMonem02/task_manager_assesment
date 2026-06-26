@@ -1,58 +1,68 @@
 import 'package:dio/dio.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/api_constants.dart';
+import '../../../../core/network/dio_error_mapper.dart';
+import '../models/login_request_model.dart';
+import '../models/register_request_model.dart';
 import '../models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> login({required String username, required String password});
-  Future<UserModel> register({required String username, required String email, required String password});
+  Future<UserModel> register({
+    required String username,
+    required String email,
+    required String password,
+  });
   Future<UserModel> getMe();
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-  final Dio _dio;
   AuthRemoteDataSourceImpl(this._dio);
+
+  final Dio _dio;
+
+  Future<UserModel> _authenticate({
+    required String endpoint,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.post(endpoint, data: data);
+      return UserModel.fromJson(response.data);
+    } on DioException catch (e) {
+      rethrowDioException(e);
+    }
+  }
 
   @override
   Future<UserModel> login({
     required String username,
     required String password,
-  }) async {
-    try {
-      final response = await _dio.post(
-        ApiConstants.loginEndpoint,
-        data: {'username': username, 'password': password, 'expiresInMins': 60},
-      );
-      return UserModel.fromJson(response.data);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 400 || e.response?.statusCode == 401) {
-        throw UnauthorizedException(
-          e.response?.data['message'] ?? 'Invalid credentials',
-        );
-      }
-      throw ServerException(e.message ?? 'Server error');
-    }
+  }) {
+    final request = LoginRequestModel(
+      username: username,
+      password: password,
+    );
+    return _authenticate(
+      endpoint: ApiConstants.loginEndpoint,
+      data: request.toJson(),
+    );
   }
+
   @override
   Future<UserModel> register({
     required String username,
     required String email,
     required String password,
-  }) async {
-    try {
-      final response = await _dio.post(
-        ApiConstants.registerEndpoint,
-        data: {'username': username, 'email': email, 'password': password, 'expiresInMins': 60},
-      );
-      return UserModel.fromJson(response.data);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 400 || e.response?.statusCode == 401) {
-        throw UnauthorizedException(
-          e.response?.data['message'] ?? 'Invalid credentials',
-        );
-      }
-      throw ServerException(e.message ?? 'Server error');
-    }
+  }) {
+    final request = RegisterRequestModel(
+      username: username,
+      email: email,
+      password: password,
+    );
+    return _authenticate(
+      endpoint: ApiConstants.registerEndpoint,
+      data: request.toJson(),
+    );
   }
 
   @override
@@ -64,7 +74,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (e.response?.statusCode == 401) {
         throw UnauthorizedException('Unauthorized');
       }
-      throw ServerException(e.message ?? 'Server error');
+      throw mapDioToServerException(e);
     }
   }
 }

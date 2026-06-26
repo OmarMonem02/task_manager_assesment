@@ -1,30 +1,44 @@
 import 'package:get_it/get_it.dart';
 import '../network/dio_factory.dart';
+import '../network/token_provider.dart';
+import '../storage/local_storage.dart';
+import '../storage/session_storage.dart';
+import '../storage/shared_preferences_local_storage.dart';
+import '../storage/theme_storage.dart';
 import '../../features/auth/data/datasources/auth_local_datasource.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/check_auth_usecase.dart';
+import '../../features/auth/domain/usecases/get_current_user_id_usecase.dart';
 import '../../features/auth/domain/usecases/login_usecase.dart';
 import '../../features/auth/domain/usecases/logout_usecase.dart';
 import '../../features/auth/domain/usecases/register_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/profile/data/datasources/profile_local_datasource.dart';
+import '../../features/profile/data/repositories/auth_user_reader.dart';
 import '../../features/profile/data/repositories/profile_repository_impl.dart';
 import '../../features/profile/domain/repositories/profile_repository.dart';
+import '../../features/profile/domain/repositories/user_reader.dart';
 import '../../features/profile/domain/usecases/get_profile_usecase.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
+import '../../features/projects/data/datasources/dio_projects_client.dart';
 import '../../features/projects/data/datasources/projects_remote_datasource.dart';
+import '../../features/projects/data/datasources/tasks_remote_datasource.dart';
 import '../../features/projects/data/repositories/projects_repository_impl.dart';
+import '../../features/projects/data/repositories/tasks_repository_impl.dart';
 import '../../features/projects/domain/repositories/projects_repository.dart';
+import '../../features/projects/domain/repositories/tasks_repository.dart';
 import '../../features/projects/domain/usecases/add_task_usecase.dart';
+import '../../features/projects/domain/usecases/create_project_usecase.dart';
 import '../../features/projects/domain/usecases/delete_project_usecase.dart';
 import '../../features/projects/domain/usecases/delete_task_usecase.dart';
+import '../../features/projects/domain/usecases/enrich_projects_with_status_usecase.dart';
 import '../../features/projects/domain/usecases/get_project_tasks_usecase.dart';
-import '../../features/projects/domain/usecases/create_project_usecase.dart';
 import '../../features/projects/domain/usecases/get_projects_usecase.dart';
 import '../../features/projects/domain/usecases/mark_task_done_usecase.dart';
-import '../../features/projects/presentation/bloc/projects_bloc.dart';
+import '../../features/projects/presentation/bloc/projects/projects_bloc.dart';
+import '../../features/projects/presentation/bloc/tasks/tasks_bloc.dart';
 import '../../features/theme/data/datasources/theme_local_datasource.dart';
 import '../../features/theme/data/repositories/theme_repository_impl.dart';
 import '../../features/theme/domain/repositories/theme_repository.dart';
@@ -35,16 +49,36 @@ import '../../features/theme/presentation/cubit/theme_cubit.dart';
 final sl = GetIt.instance;
 
 Future<void> setupDependencies() async {
-  // ─── Dio ───────────────────────────────────────────────────────────────
-  sl.registerLazySingleton(() => DioFactory.createAuthDio(), instanceName: 'authDio');
-  sl.registerLazySingleton(() => DioFactory.createProjectsDio(), instanceName: 'projectsDio');
+  // ─── Storage ───────────────────────────────────────────────────────────
+  final localStorage = await SharedPreferencesLocalStorage.create();
+  sl.registerLazySingleton<LocalStorage>(() => localStorage);
+  sl.registerLazySingleton<SessionStorage>(
+    () => SharedPreferencesSessionStorage(sl()),
+  );
+  sl.registerLazySingleton<ThemeStorage>(
+    () => SharedPreferencesThemeStorage(sl()),
+  );
+
+  // ─── Network ───────────────────────────────────────────────────────────
+  sl.registerLazySingleton<TokenProvider>(
+    () => SessionTokenProvider(sl()),
+  );
+  sl.registerLazySingleton(() => DioFactory(sl()));
+  sl.registerLazySingleton(
+    () => sl<DioFactory>().createAuthDio(),
+    instanceName: 'authDio',
+  );
+  sl.registerLazySingleton(
+    () => sl<DioFactory>().createProjectsDio(),
+    instanceName: 'projectsDio',
+  );
 
   // ─── Auth DataSources ──────────────────────────────────────────────────
   sl.registerLazySingleton<AuthRemoteDataSource>(
     () => AuthRemoteDataSourceImpl(sl(instanceName: 'authDio')),
   );
   sl.registerLazySingleton<AuthLocalDataSource>(
-    () => AuthLocalDataSourceImpl(),
+    () => AuthLocalDataSourceImpl(sl()),
   );
 
   // ─── Auth Repository ───────────────────────────────────────────────────
@@ -60,6 +94,7 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton(() => RegisterUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => CheckAuthUseCase(sl()));
+  sl.registerLazySingleton(() => GetCurrentUserIdUseCase(sl()));
 
   // ─── Auth BLoC ─────────────────────────────────────────────────────────
   sl.registerFactory(
@@ -73,14 +108,15 @@ Future<void> setupDependencies() async {
 
   // ─── Profile DataSources ───────────────────────────────────────────────
   sl.registerLazySingleton<ProfileLocalDataSource>(
-    () => ProfileLocalDataSourceImpl(),
+    () => ProfileLocalDataSourceImpl(sl()),
   );
 
   // ─── Profile Repository ────────────────────────────────────────────────
+  sl.registerLazySingleton<UserReader>(() => AuthUserReader(sl()));
   sl.registerLazySingleton<ProfileRepository>(
     () => ProfileRepositoryImpl(
       localDataSource: sl(),
-      authRepository: sl(),
+      userReader: sl(),
     ),
   );
 
@@ -96,17 +132,29 @@ Future<void> setupDependencies() async {
   );
 
   // ─── Projects DataSources ──────────────────────────────────────────────
+  sl.registerLazySingleton(
+    () => DioProjectsClient(sl(instanceName: 'projectsDio')),
+  );
   sl.registerLazySingleton<ProjectsRemoteDataSource>(
-    () => ProjectsRemoteDataSourceImpl(sl(instanceName: 'projectsDio')),
+    () => ProjectsRemoteDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<TasksRemoteDataSource>(
+    () => TasksRemoteDataSourceImpl(sl()),
   );
 
-  // ─── Projects Repository ───────────────────────────────────────────────
+  // ─── Projects Repositories ─────────────────────────────────────────────
   sl.registerLazySingleton<ProjectsRepository>(
     () => ProjectsRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<TasksRepository>(
+    () => TasksRepositoryImpl(remoteDataSource: sl()),
   );
 
   // ─── Projects Use Cases ────────────────────────────────────────────────
   sl.registerLazySingleton(() => GetProjectsUseCase(sl()));
+  sl.registerLazySingleton(
+    () => EnrichProjectsWithStatusUseCase(sl(), sl()),
+  );
   sl.registerLazySingleton(() => CreateProjectUseCase(sl()));
   sl.registerLazySingleton(() => DeleteProjectUseCase(sl()));
   sl.registerLazySingleton(() => GetProjectTasksUseCase(sl()));
@@ -117,9 +165,16 @@ Future<void> setupDependencies() async {
   // ─── Projects BLoC ─────────────────────────────────────────────────────
   sl.registerFactory(
     () => ProjectsBloc(
-      getProjectsUseCase: sl(),
+      enrichProjectsWithStatusUseCase: sl(),
       createProjectUseCase: sl(),
       deleteProjectUseCase: sl(),
+      getCurrentUserIdUseCase: sl(),
+    ),
+  );
+
+  // ─── Tasks BLoC ────────────────────────────────────────────────────────
+  sl.registerFactory(
+    () => TasksBloc(
       getProjectTasksUseCase: sl(),
       addTaskUseCase: sl(),
       markTaskDoneUseCase: sl(),
@@ -129,7 +184,7 @@ Future<void> setupDependencies() async {
 
   // ─── Theme DataSources ─────────────────────────────────────────────────
   sl.registerLazySingleton<ThemeLocalDataSource>(
-    () => ThemeLocalDataSourceImpl(),
+    () => ThemeLocalDataSourceImpl(sl()),
   );
 
   // ─── Theme Repository ──────────────────────────────────────────────────

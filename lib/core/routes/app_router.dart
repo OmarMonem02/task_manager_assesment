@@ -1,13 +1,16 @@
 import 'package:go_router/go_router.dart';
+import '../../features/auth/domain/usecases/check_auth_usecase.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
-import '../../features/projects/presentation/pages/projects_page.dart';
-import '../../features/projects/presentation/pages/project_details_page.dart';
 import '../../features/projects/domain/entities/project_entity.dart';
-import '../storage/shared_pref_helper.dart';
+import '../../features/projects/presentation/pages/project_details_page.dart';
+import '../../features/projects/presentation/pages/projects_page.dart';
+import '../di/dependency_injection.dart';
 
 class AppRouter {
+  AppRouter._();
+
   static const String login = '/login';
   static const String register = '/register';
   static const String projects = '/projects';
@@ -17,8 +20,7 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: login,
     redirect: (context, state) async {
-      final token = await SharedPrefHelper.getAccessToken();
-      final isLoggedIn = token != null && token.isNotEmpty;
+      final isLoggedIn = await sl<CheckAuthUseCase>()();
       final isAuthRoute =
           state.matchedLocation == login || state.matchedLocation == register;
 

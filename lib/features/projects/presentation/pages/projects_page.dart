@@ -6,13 +6,14 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/routes/app_router.dart';
 import '../../../../core/theme/theme_context_extension.dart';
-import '../bloc/projects_bloc.dart';
-import '../bloc/projects_event.dart';
-import '../bloc/projects_state.dart';
-import '../widgets/delete_confirmation_dialog.dart';
+import '../../../../core/widgets/app_error.dart';
+import '../bloc/projects/projects_bloc.dart';
+import '../bloc/projects/projects_event.dart';
+import '../bloc/projects/projects_state.dart';
 import '../widgets/add_project_bottom_sheet.dart';
-import '../widgets/project_card.dart';
+import '../widgets/delete_confirmation_dialog.dart';
 import '../widgets/empty_projects.dart';
+import '../widgets/project_card.dart';
 import '../widgets/skeleton_card.dart';
 
 class ProjectsPage extends StatelessWidget {
@@ -83,26 +84,10 @@ class _ProjectsView extends StatelessWidget {
           }
 
           if (state is ProjectsError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 48.r, color: scheme.error),
-                  SizedBox(height: 16.h),
-                  Text(
-                    state.message,
-                    style: TextStyle(fontSize: 14.sp, color: colors.secondaryText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 16.h),
-                  ElevatedButton(
-                    onPressed: () => context
-                        .read<ProjectsBloc>()
-                        .add(GetProjectsRequested()),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
+            return AppErrorView(
+              message: state.message,
+              onRetry: () =>
+                  context.read<ProjectsBloc>().add(GetProjectsRequested()),
             );
           }
 
@@ -162,7 +147,9 @@ class _ProjectsView extends StatelessWidget {
       ),
       floatingActionButton: BlocBuilder<ProjectsBloc, ProjectsState>(
         builder: (context, state) {
-          if (state is ProjectsLoaded || state is ProjectsEmpty || state is ProjectsError) {
+          if (state is ProjectsLoaded ||
+              state is ProjectsEmpty ||
+              state is ProjectsError) {
             return FloatingActionButton(
               onPressed: () => _showCreateProjectSheet(context),
               child: const Icon(Icons.add),

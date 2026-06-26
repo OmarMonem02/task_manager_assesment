@@ -1,17 +1,27 @@
 import '../../domain/entities/task_entity.dart';
 
-class TaskModel extends TaskEntity {
+class TaskModel {
   const TaskModel({
-    required super.id,
-    required super.title,
-    required super.completed,
-    required super.projectId,
-    required super.userId,
-    required super.description,
-    required super.status,
-    required super.priority,
-    required super.dueDate,
+    required this.id,
+    required this.title,
+    required this.completed,
+    required this.projectId,
+    required this.userId,
+    required this.description,
+    required this.status,
+    required this.priority,
+    required this.dueDate,
   });
+
+  final int id;
+  final String title;
+  final bool completed;
+  final int projectId;
+  final int userId;
+  final TaskStatus status;
+  final String description;
+  final String priority;
+  final int dueDate;
 
   factory TaskModel.fromJson(Map<String, dynamic> json) {
     final completed = json['completed'] == true;
@@ -25,6 +35,34 @@ class TaskModel extends TaskEntity {
       description: json['description'] ?? '',
       priority: json['priority'] ?? 'Medium',
       dueDate: _parseInt(json['dueDate']),
+    );
+  }
+
+  factory TaskModel.fromEntity(TaskEntity entity) {
+    return TaskModel(
+      id: entity.id,
+      title: entity.title,
+      completed: entity.completed,
+      projectId: entity.projectId,
+      userId: entity.userId,
+      status: entity.status,
+      description: entity.description,
+      priority: entity.priority,
+      dueDate: entity.dueDate,
+    );
+  }
+
+  TaskEntity toEntity() {
+    return TaskEntity(
+      id: id,
+      title: title,
+      completed: completed,
+      projectId: projectId,
+      userId: userId,
+      status: status,
+      description: description,
+      priority: priority,
+      dueDate: dueDate,
     );
   }
 
@@ -43,7 +81,6 @@ class TaskModel extends TaskEntity {
     if (value is String) return int.tryParse(value) ?? fallback;
     return fallback;
   }
-
 
   Map<String, dynamic> toJson() {
     return {

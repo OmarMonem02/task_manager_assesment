@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../auth/presentation/widgets/input_decoration.dart';
 import '../../../../core/theme/theme_context_extension.dart';
+import '../../../../core/utils/validators.dart';
+import '../../../../core/widgets/app_bottom_sheet.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_input_decoration.dart';
 
 class AddProjectBottomSheet extends StatefulWidget {
-  final void Function(String name, String description) onAdd;
-
   const AddProjectBottomSheet({super.key, required this.onAdd});
+
+  final void Function(String name, String description) onAdd;
 
   @override
   State<AddProjectBottomSheet> createState() => _AddProjectBottomSheetState();
@@ -38,77 +41,39 @@ class _AddProjectBottomSheetState extends State<AddProjectBottomSheet> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        padding: EdgeInsets.all(24.r),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-        ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36.w,
-                  height: 4.h,
-                  decoration: BoxDecoration(
-                    color: colors.divider,
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
+    return AppBottomSheet(
+      title: 'Create New Project',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _nameController,
+              autofocus: true,
+              decoration: appInputDecoration(
+                context,
+                hint: 'Project name...',
+                fillColor: colors.scaffoldBackground,
+                showEnabledBorder: false,
               ),
-              SizedBox(height: 20.h),
-              Text(
-                'Create New Project',
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                  color: colors.primaryText,
-                ),
+              validator: (value) => Validators.required(value, 'a project name'),
+            ),
+            SizedBox(height: 12.h),
+            TextFormField(
+              controller: _descriptionController,
+              maxLines: 3,
+              decoration: appInputDecoration(
+                context,
+                hint: 'Description (optional)',
+                fillColor: colors.scaffoldBackground,
+                showEnabledBorder: false,
               ),
-              SizedBox(height: 16.h),
-              TextFormField(
-                controller: _nameController,
-                autofocus: true,
-                decoration: sheetInputDecoration(context, 'Project name...'),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a project name';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 12.h),
-              TextFormField(
-                controller: _descriptionController,
-                maxLines: 3,
-                decoration: sheetInputDecoration(context, 'Description (optional)'),
-              ),
-              SizedBox(height: 16.h),
-              SizedBox(
-                width: double.infinity,
-                height: 50.h,
-                child: ElevatedButton(
-                  onPressed: _submit,
-                  child: Text(
-                    'Create Project',
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 8.h),
-            ],
-          ),
+            ),
+            SizedBox(height: 16.h),
+            AppButton(label: 'Create Project', onPressed: _submit),
+          ],
         ),
       ),
     );

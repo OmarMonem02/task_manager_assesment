@@ -10,10 +10,8 @@ abstract class AuthRepository {
     required String email,
     required String password,
   });
-
   Future<UserEntity> getMe();
-
   Future<void> logout();
-
   Future<bool> isLoggedIn();
+  Future<int?> getCurrentUserId();
 }

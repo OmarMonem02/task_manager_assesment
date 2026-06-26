@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_context_extension.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../../domain/entities/task_entity.dart';
+import '../utils/status_presentation.dart';
 
 class TaskCard extends StatelessWidget {
-  final TaskEntity task;
-  final VoidCallback? onMarkDone;
-  final VoidCallback? onDelete;
-
   const TaskCard({
     super.key,
     required this.task,
@@ -16,57 +14,17 @@ class TaskCard extends StatelessWidget {
     this.onDelete,
   });
 
-  Color _statusColor() {
-    switch (task.status) {
-      case TaskStatus.done:
-        return AppColors.statusCompleted;
-      case TaskStatus.inProgress:
-        return AppColors.statusInProgress;
-      case TaskStatus.pending:
-        return AppColors.statusPending;
-    }
-  }
-
-  String _statusLabel() {
-    switch (task.status) {
-      case TaskStatus.done:
-        return 'Done';
-      case TaskStatus.inProgress:
-        return 'In Progress';
-      case TaskStatus.pending:
-        return 'Pending';
-    }
-  }
-
-  Color _priorityColor() {
-    switch (task.priority.toLowerCase()) {
-      case 'high':
-        return AppColors.priorityHigh;
-      case 'low':
-        return AppColors.priorityLow;
-      default:
-        return AppColors.priorityMedium;
-    }
-  }
+  final TaskEntity task;
+  final VoidCallback? onMarkDone;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final scheme = context.colorScheme;
 
-    return Container(
+    return AppCard(
       padding: EdgeInsets.all(14.r),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: colors.cardShadow,
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: Row(
         children: [
           GestureDetector(
@@ -108,42 +66,14 @@ class TaskCard extends StatelessWidget {
                 SizedBox(height: 6.h),
                 Row(
                   children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8.w,
-                        vertical: 4.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _statusColor().withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6.r),
-                      ),
-                      child: Text(
-                        _statusLabel(),
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          color: _statusColor(),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                    StatusBadge(
+                      label: StatusPresentation.labelForTaskStatus(task.status),
+                      color: StatusPresentation.colorForTaskStatus(task.status),
                     ),
                     SizedBox(width: 6.w),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8.w,
-                        vertical: 4.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _priorityColor().withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6.r),
-                      ),
-                      child: Text(
-                        task.priority,
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          color: _priorityColor(),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                    StatusBadge(
+                      label: task.priority,
+                      color: StatusPresentation.colorForPriority(task.priority),
                     ),
                   ],
                 ),

@@ -1,5 +1,5 @@
 import '../../../../core/errors/exceptions.dart';
-import '../../../../core/storage/shared_pref_helper.dart';
+import '../../../../core/storage/session_storage.dart';
 
 abstract class AuthLocalDataSource {
   Future<void> saveTokens({
@@ -13,11 +13,16 @@ abstract class AuthLocalDataSource {
   });
   Future<Map<String, String>?> getUserProfile();
   Future<String?> getAccessToken();
+  Future<int?> getUserId();
   Future<bool> isLoggedIn();
   Future<void> clearTokens();
 }
 
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
+  AuthLocalDataSourceImpl(this._sessionStorage);
+
+  final SessionStorage _sessionStorage;
+
   @override
   Future<void> saveTokens({
     required String accessToken,
@@ -25,9 +30,9 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     required int userId,
   }) async {
     try {
-      await SharedPrefHelper.saveAccessToken(accessToken);
-      await SharedPrefHelper.saveRefreshToken(refreshToken);
-      await SharedPrefHelper.saveUserId(userId);
+      await _sessionStorage.saveAccessToken(accessToken);
+      await _sessionStorage.saveRefreshToken(refreshToken);
+      await _sessionStorage.saveUserId(userId);
     } catch (e) {
       throw CacheException('Failed to save tokens');
     }
@@ -39,7 +44,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     required String email,
   }) async {
     try {
-      await SharedPrefHelper.saveUserProfile(
+      await _sessionStorage.saveUserProfile(
         username: username,
         email: email,
       );
@@ -49,23 +54,23 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   }
 
   @override
-  Future<Map<String, String>?> getUserProfile() async {
-    return SharedPrefHelper.getUserProfile();
-  }
+  Future<Map<String, String>?> getUserProfile() =>
+      _sessionStorage.getUserProfile();
 
   @override
-  Future<String?> getAccessToken() async {
-    return SharedPrefHelper.getAccessToken();
-  }
+  Future<String?> getAccessToken() => _sessionStorage.getAccessToken();
+
+  @override
+  Future<int?> getUserId() => _sessionStorage.getUserId();
 
   @override
   Future<bool> isLoggedIn() async {
-    final token = await SharedPrefHelper.getAccessToken();
+    final token = await _sessionStorage.getAccessToken();
     return token != null && token.isNotEmpty;
   }
 
   @override
   Future<void> clearTokens() async {
-    await SharedPrefHelper.clearAuthData();
+    await _sessionStorage.clearAuthData();
   }
 }

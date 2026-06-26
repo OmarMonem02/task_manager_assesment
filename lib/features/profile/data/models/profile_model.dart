@@ -1,11 +1,14 @@
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../domain/entities/profile_entity.dart';
 
-class ProfileModel extends ProfileEntity {
+class ProfileModel {
   const ProfileModel({
-    required super.username,
-    required super.email,
+    required this.username,
+    required this.email,
   });
+
+  final String username;
+  final String email;
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
     return ProfileModel(
@@ -21,10 +24,24 @@ class ProfileModel extends ProfileEntity {
     );
   }
 
+  factory ProfileModel.fromEntity(ProfileEntity entity) {
+    return ProfileModel(
+      username: entity.username,
+      email: entity.email,
+    );
+  }
+
   factory ProfileModel.fromCache(Map<String, String> cache) {
     return ProfileModel(
       username: cache['username'] ?? '',
       email: cache['email'] ?? '',
+    );
+  }
+
+  ProfileEntity toEntity() {
+    return ProfileEntity(
+      username: username,
+      email: email,
     );
   }
 
