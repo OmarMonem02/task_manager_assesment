@@ -1,18 +1,70 @@
 # Task Manager
 
-A Flutter assessment project built using **Clean Architecture**, **BLoC State Management**, and modern Flutter development practices.
+A Flutter task management app built with **Clean Architecture**, **BLoC** state management, and modern Flutter practices. It authenticates users via [DummyJSON](https://dummyjson.com), manages projects and tasks via [MockAPI](https://mockapi.io), and persists sessions locally with SharedPreferences.
+
+**Tech stack:** Flutter · Dio · GetIt · GoRouter · flutter_bloc · SharedPreferences · ScreenUtil
+
+---
 
 ## Features
 
-* Create, update, and delete tasks
-* Mark tasks as completed
-* Offline data persistence
-* API integration using Dio
-* Dependency Injection using GetIt
-* State Management using BLoC
-* Responsive UI across different screen sizes
-* Internet connection monitoring
-* Loading skeletons and image caching
+### Authentication
+- Login and registration
+- Session persistence (access + refresh tokens)
+- Route guards — unauthenticated users are redirected to login
+
+### Projects
+- List projects filtered by logged-in user
+- Create and delete projects
+- Project status enrichment from task completion
+
+### Tasks
+- List tasks per project
+- Add tasks with priority
+- Mark tasks as done
+- Delete tasks via swipe actions (`flutter_slidable`)
+
+### Profile
+- Display user information
+- Local profile cache with remote refresh via `GET /auth/me`
+
+### Theme
+- Light, dark, and system theme modes via `ThemeCubit`
+
+### UX
+- Responsive layout (`flutter_screenutil`)
+- Loading skeletons (`skeletonizer`)
+- Network image caching (`cached_network_image`)
+- Internet connection monitoring (`internet_connection_checker_plus`)
+
+---
+
+## Architecture
+
+The app follows **Clean Architecture** with three layers per feature:
+
+| Layer | Responsibility |
+|-------|----------------|
+| **Presentation** | Pages, widgets, BLoC/Cubit (events & states) |
+| **Domain** | Entities, repository contracts, use cases |
+| **Data** | Models, data sources (local & remote), repository implementations |
+
+```mermaid
+flowchart TB
+  UI[Pages and Widgets] --> BLoC[BLoC / Cubit]
+  BLoC --> UseCase[Use Cases]
+  UseCase --> Repo[Repository Interface]
+  Repo --> RepoImpl[Repository Implementation]
+  RepoImpl --> LocalDS[Local DataSource]
+  RepoImpl --> RemoteDS[Remote DataSource]
+  RemoteDS --> API[REST APIs]
+```
+
+**Key files:**
+- [lib/core/di/dependency_injection.dart](lib/core/di/dependency_injection.dart) — GetIt service registration
+- [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart) — GoRouter routes and auth redirects
+- [lib/core/network/dio_factory.dart](lib/core/network/dio_factory.dart) — Dio clients and Bearer token interceptor
+- [lib/core/network/api_constants.dart](lib/core/network/api_constants.dart) — Base URLs and endpoint paths
 
 ---
 
@@ -21,203 +73,544 @@ A Flutter assessment project built using **Clean Architecture**, **BLoC State Ma
 ```text
 lib/
 ├── core/
-│   ├── constants/
-│   │   └── app_constants.dart
-│   │
-│   ├── di/
-│   │   └── dependency_injection.dart
-│   │
-│   ├── errors/
-│   │   ├── exceptions.dart
-│   │   └── failures.dart
-│   │
-│   ├── network/
-│   │   ├── api_constants.dart
-│   │   ├── api_result.dart
-│   │   └── dio_factory.dart
-│   │
-│   ├── routes/
-│   │   └── app_router.dart
-│   │
-│   ├── storage/
-│   │   └── shared_pref_helper.dart
-│   │
-│   ├── theme/
-│   │   └── app_theme.dart
-│   │
-│   └── widgets/
-│       ├── app_button.dart
-│       ├── app_error.dart
-│       ├── app_loading.dart
-│       └── app_text_field.dart
+│   ├── constants/       # App-wide configuration
+│   ├── di/              # Dependency injection (GetIt)
+│   ├── errors/          # Exceptions and failures
+│   ├── network/         # Dio factory, API constants, error mapping
+│   ├── routes/          # GoRouter configuration
+│   ├── storage/         # SharedPreferences wrappers
+│   ├── theme/           # Light/dark themes and extensions
+│   ├── utils/           # Validators, safe_call, snackbar helpers
+│   └── widgets/         # Reusable UI components
 │
 ├── features/
-│   ├── auth/
-│   │   ├── data/
-│   │   │   ├── datasources/
-│   │   │   │   ├── auth_local_datasource.dart
-│   │   │   │   └── auth_remote_datasource.dart
-│   │   │   ├── models/
-│   │   │   │   ├── login_request_model.dart
-│   │   │   │   ├── register_request_model.dart
-│   │   │   │   └── user_model.dart
-│   │   │   └── repositories/
-│   │   │       └── auth_repository_impl.dart
-│   │   ├── domain/
-│   │   │   ├── entities/
-│   │   │   │   └── user_entity.dart
-│   │   │   ├── repositories/
-│   │   │   │   └── auth_repository.dart
-│   │   │   └── usecases/
-│   │   │       ├── check_auth_usecase.dart
-│   │   │       ├── login_usecase.dart
-│   │   │       ├── logout_usecase.dart
-│   │   │       └── register_usecase.dart
-│   │   └── presentation/
-│   │       ├── bloc/
-│   │       │   ├── auth_bloc.dart
-│   │       │   ├── auth_event.dart
-│   │       │   └── auth_state.dart
-│   │       ├── pages/
-│   │       │   ├── login_page.dart
-│   │       │   └── register_page.dart
-│   │       └── widgets/
-│   │           ├── auth_button.dart
-│   │           ├── login_form.dart
-│   │           └── register_form.dart
-│   │
-│   ├── profile/
-│   │   ├── data/
-│   │   │   ├── datasources/
-│   │   │   │   └── profile_local_datasource.dart
-│   │   │   ├── models/
-│   │   │   │   └── profile_model.dart
-│   │   │   └── repositories/
-│   │   │       └── profile_repository_impl.dart
-│   │   ├── domain/
-│   │   │   ├── entities/
-│   │   │   │   └── profile_entity.dart
-│   │   │   ├── repositories/
-│   │   │   │   └── profile_repository.dart
-│   │   │   └── usecases/
-│   │   │       └── get_profile_usecase.dart
-│   │   └── presentation/
-│   │       ├── bloc/
-│   │       │   ├── profile_bloc.dart
-│   │       │   ├── profile_event.dart
-│   │       │   └── profile_state.dart
-│   │       ├── pages/
-│   │       │   └── profile_page.dart
-│   │       └── widgets/
-│   │           └── profile_header.dart
-│   │
-│   └── projects/
-│       ├── data/
-│       │   ├── datasources/
-│       │   │   └── projects_remote_datasource.dart
-│       │   ├── models/
-│       │   │   ├── project_model.dart
-│       │   │   └── task_model.dart
-│       │   └── repositories/
-│       │       └── projects_repository_impl.dart
-│       ├── domain/
-│       │   ├── entities/
-│       │   │   ├── project_entity.dart
-│       │   │   └── task_entity.dart
-│       │   ├── repositories/
-│       │   │   └── projects_repository.dart
-│       │   └── usecases/
-│       │       ├── add_task_usecase.dart
-│       │       ├── get_project_tasks_usecase.dart
-│       │       ├── get_projects_usecase.dart
-│       │       └── mark_task_done_usecase.dart
-│       └── presentation/
-│           ├── bloc/
-│           │   ├── projects_bloc.dart
-│           │   ├── projects_event.dart
-│           │   └── projects_state.dart
-│           ├── pages/
-│           │   ├── project_details_page.dart
-│           │   └── projects_page.dart
-│           └── widgets/
-│               ├── add_task_bottom_sheet.dart
-│               ├── empty_projects.dart
-│               ├── project_card.dart
-│               └── task_card.dart
+│   ├── auth/            # Login, register, session management
+│   ├── profile/         # User profile display
+│   ├── projects/        # Projects + tasks (projects_bloc, tasks_bloc)
+│   └── theme/           # Theme mode persistence
 │
 └── main.dart
 ```
 
-### Core Layer
+Each feature module contains `data/`, `domain/`, and `presentation/` subfolders following the repository and use-case pattern.
 
-The `core` module contains shared services and utilities used across the entire application:
+---
 
-* **Constants** — app-wide configuration values
-* **Dependency Injection** using GetIt
-* **Error Handling** — exceptions and failures
-* **Network Layer** using Dio
-* **Application Routing** using GoRouter
-* **Local Storage** using SharedPreferences
-* **Theme** — centralized app styling
-* **Reusable Widgets** — shared UI components
+## App Routes
 
-### Feature Modules
+Defined in [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart):
 
-Each feature follows Clean Architecture principles and is divided into three layers:
+| Route | Screen | Notes |
+|-------|--------|-------|
+| `/login` | Login | Initial route for unauthenticated users |
+| `/register` | Register | |
+| `/projects` | Projects list | Default route after login |
+| `/profile` | Profile | |
+| `/projects/:id` | Project details | Requires `ProjectEntity` passed as `extra` |
 
-#### Data Layer
+Authenticated users visiting `/login` or `/register` are redirected to `/projects`.
 
-Contains:
+---
 
-* Models
-* Data Sources (local & remote)
-* Repository Implementations
+## API Reference
 
-#### Domain Layer
+The app talks to **two separate backends**. Both Dio clients attach a `Bearer` token from local storage when available (see [dio_factory.dart](lib/core/network/dio_factory.dart)).
 
-Contains:
+- **Connect timeout:** 30 seconds
+- **Receive timeout:** 30 seconds
+- **Content-Type:** `application/json`
 
-* Entities
-* Repository Contracts
-* Use Cases
+```mermaid
+flowchart LR
+  subgraph authAPI [DummyJSON Auth]
+    Login["POST /auth/login"]
+    Register["POST /users/add"]
+    GetMe["GET /auth/me"]
+  end
+  subgraph mockAPI [MockAPI Projects]
+    GetProjects["GET /projects"]
+    CreateProject["POST /projects"]
+    DeleteProject["DELETE /projects/:id"]
+    GetTasks["GET /tasks"]
+    AddTask["POST /tasks"]
+    MarkDone["PATCH /tasks/:id"]
+    DeleteTask["DELETE /projects/:id/tasks/:taskId"]
+  end
+  App[Flutter App] --> authAPI
+  App --> mockAPI
+```
 
-#### Presentation Layer
+---
 
-Contains:
+### Backend 1: DummyJSON (Authentication)
 
-* Pages
-* Widgets
-* BLoC (events & states)
+**Base URL:** `https://dummyjson.com`
 
-### Available Features
+**Source:** [lib/features/auth/data/datasources/auth_remote_datasource.dart](lib/features/auth/data/datasources/auth_remote_datasource.dart)
 
-#### Authentication
+#### Demo Credentials
 
-Handles:
+Use any user from [dummyjson.com/users](https://dummyjson.com/users). The login screen shows:
 
-* User Login
-* User Registration
-* Session Check
-* Logout
+| Username | Password |
+|----------|----------|
+| `emilys` | `emilyspass` |
+| `emmaj` | `emmajpass` |
 
-#### Projects
+---
 
-Handles:
+#### POST `/auth/login`
 
-* Project Listing
-* Project Details
-* Task Management (add, list, mark done)
+Authenticate an existing user and receive JWT tokens.
 
-#### Profile
+| | |
+|---|---|
+| **Auth required** | No |
+| **Used by** | Login feature |
+| **Source** | `AuthRemoteDataSource.login()` |
 
-Handles:
+**Request body:**
 
-* User Information
-* Profile Display
+```json
+{
+  "username": "emilys",
+  "password": "emilyspass",
+  "expiresInMins": 60
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `username` | string | Yes | — | DummyJSON username |
+| `password` | string | Yes | — | DummyJSON password |
+| `expiresInMins` | int | No | `60` | Access token lifetime in minutes |
+
+**Success response (200):**
+
+```json
+{
+  "id": 1,
+  "username": "emilys",
+  "email": "emily.johnson@x.dummyjson.com",
+  "firstName": "Emily",
+  "lastName": "Johnson",
+  "image": "https://dummyjson.com/icon/emilys/128",
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Error responses:** `400` / `401` are mapped to `UnauthorizedException` with the server message.
+
+**curl example:**
+
+```bash
+curl -X POST https://dummyjson.com/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"emilys","password":"emilyspass","expiresInMins":60}'
+```
+
+---
+
+#### POST `/users/add`
+
+Register a new user. The app sends the same token-related fields as login and expects a user object with tokens in the response.
+
+| | |
+|---|---|
+| **Auth required** | No |
+| **Used by** | Register feature |
+| **Source** | `AuthRemoteDataSource.register()` |
+
+**Request body:**
+
+```json
+{
+  "username": "newuser",
+  "email": "newuser@example.com",
+  "password": "securepass123",
+  "expiresInMins": 60
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `username` | string | Yes | — | Desired username |
+| `email` | string | Yes | — | User email |
+| `password` | string | Yes | — | User password |
+| `expiresInMins` | int | No | `60` | Access token lifetime in minutes |
+
+**Success response:** Same shape as login — parsed fields: `id`, `username`, `email`, `firstName`, `lastName`, `image`, `accessToken`, `refreshToken`.
+
+**curl example:**
+
+```bash
+curl -X POST https://dummyjson.com/users/add \
+  -H "Content-Type: application/json" \
+  -d '{"username":"newuser","email":"newuser@example.com","password":"securepass123","expiresInMins":60}'
+```
+
+---
+
+#### GET `/auth/me`
+
+Return the currently authenticated user's profile.
+
+| | |
+|---|---|
+| **Auth required** | Yes — `Authorization: Bearer {accessToken}` |
+| **Used by** | Profile feature (via `AuthUserReader`) |
+| **Source** | `AuthRemoteDataSource.getMe()` |
+
+**Request:** No body. Bearer token is attached automatically by the Dio interceptor.
+
+**Success response (200):**
+
+```json
+{
+  "id": 1,
+  "username": "emilys",
+  "email": "emily.johnson@x.dummyjson.com",
+  "firstName": "Emily",
+  "lastName": "Johnson",
+  "image": "https://dummyjson.com/icon/emilys/128"
+}
+```
+
+**Error responses:** `401` throws `UnauthorizedException`.
+
+**curl example:**
+
+```bash
+curl https://dummyjson.com/auth/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+---
+
+#### POST `/auth/refresh` *(not implemented)*
+
+Defined as a constant in [api_constants.dart](lib/core/network/api_constants.dart) but **not wired** in the app. Available on DummyJSON for future token refresh:
+
+```json
+{
+  "refreshToken": "YOUR_REFRESH_TOKEN",
+  "expiresInMins": 60
+}
+```
+
+---
+
+### Backend 2: MockAPI (Projects & Tasks)
+
+**Base URL:** `https://6a3e00650443193a1a0b4a35.mockapi.io/`
+
+**Sources:**
+- [lib/features/projects/data/datasources/projects_remote_datasource.dart](lib/features/projects/data/datasources/projects_remote_datasource.dart)
+- [lib/features/projects/data/datasources/tasks_remote_datasource.dart](lib/features/projects/data/datasources/tasks_remote_datasource.dart)
+- [lib/features/projects/data/datasources/dio_projects_client.dart](lib/features/projects/data/datasources/dio_projects_client.dart)
+
+The projects Dio client treats HTTP status codes `< 500` as non-throwing responses.
+
+---
+
+#### GET `/projects?userId={userId}`
+
+List all projects belonging to a user.
+
+| | |
+|---|---|
+| **Auth required** | Bearer token attached (if logged in) |
+| **Used by** | Projects list |
+| **Source** | `ProjectsRemoteDataSource.getProjects()` |
+
+**Query parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `userId` | int | Yes | Logged-in user's ID |
+
+**Success response (200):** JSON array of project objects.
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Mobile App",
+    "userId": 1,
+    "createdAt": 1719494400,
+    "description": "Flutter task manager",
+    "status": "active"
+  }
+]
+```
+
+**Edge cases:** `404` or a non-array response returns an empty list in the app.
+
+**curl example:**
+
+```bash
+curl "https://6a3e00650443193a1a0b4a35.mockapi.io/projects?userId=1"
+```
+
+---
+
+#### POST `/projects`
+
+Create a new project.
+
+| | |
+|---|---|
+| **Auth required** | Bearer token attached (if logged in) |
+| **Used by** | Create project |
+| **Source** | `ProjectsRemoteDataSource.createProject()` |
+
+**Request body:**
+
+```json
+{
+  "name": "My Project",
+  "description": "Project description",
+  "status": "active",
+  "userId": 1,
+  "createdAt": 1719494400
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | string | Yes | — | Project name |
+| `description` | string | Yes | — | Project description |
+| `status` | string | Yes | `"active"` | Project status |
+| `userId` | int | Yes | — | Owner user ID |
+| `createdAt` | int | Yes | current Unix timestamp | Creation time (seconds) |
+
+**Success response (201):** Single project object (same shape as list item).
+
+**curl example:**
+
+```bash
+curl -X POST https://6a3e00650443193a1a0b4a35.mockapi.io/projects \
+  -H "Content-Type: application/json" \
+  -d '{"name":"My Project","description":"Description","status":"active","userId":1,"createdAt":1719494400}'
+```
+
+---
+
+#### DELETE `/projects/{projectId}`
+
+Delete a project by ID.
+
+| | |
+|---|---|
+| **Auth required** | Bearer token attached (if logged in) |
+| **Used by** | Delete project |
+| **Source** | `ProjectsRemoteDataSource.deleteProject()` |
+
+**Path parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `projectId` | int | Project ID to delete |
+
+**Success response:** `200` or `204`. `404` is treated as success (idempotent delete).
+
+**curl example:**
+
+```bash
+curl -X DELETE https://6a3e00650443193a1a0b4a35.mockapi.io/projects/1
+```
+
+---
+
+#### GET `/tasks?projectId={projectId}`
+
+List all tasks for a project.
+
+| | |
+|---|---|
+| **Auth required** | Bearer token attached (if logged in) |
+| **Used by** | Project details / task list |
+| **Source** | `TasksRemoteDataSource.getProjectTasks()` |
+
+**Query parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `projectId` | int | Yes | Parent project ID |
+
+**Success response (200):** JSON array of task objects.
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Design login screen",
+    "completed": false,
+    "projectId": 1,
+    "userId": 1,
+    "description": "",
+    "status": "Pending",
+    "priority": "Medium",
+    "dueDate": 1719494400
+  }
+]
+```
+
+**Edge cases:** `404` or a non-array response returns an empty list in the app.
+
+**curl example:**
+
+```bash
+curl "https://6a3e00650443193a1a0b4a35.mockapi.io/tasks?projectId=1"
+```
+
+---
+
+#### POST `/tasks`
+
+Add a new task to a project.
+
+| | |
+|---|---|
+| **Auth required** | Bearer token attached (if logged in) |
+| **Used by** | Add task |
+| **Source** | `TasksRemoteDataSource.addTask()` |
+
+**Request body:**
+
+```json
+{
+  "title": "Task title",
+  "projectId": 1,
+  "completed": false,
+  "status": "Pending",
+  "priority": "Medium",
+  "description": "",
+  "dueDate": 1719494400
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `title` | string | Yes | — | Task title |
+| `projectId` | int | Yes | — | Parent project ID |
+| `completed` | bool | Yes | `false` | Completion flag |
+| `status` | string | Yes | `"Pending"` | Task status |
+| `priority` | string | No | `"Medium"` | Priority level |
+| `description` | string | Yes | `""` | Task description |
+| `dueDate` | int | Yes | current Unix timestamp | Due date (seconds) |
+
+**Success response (201):** Single task object (same shape as list item).
+
+**curl example:**
+
+```bash
+curl -X POST https://6a3e00650443193a1a0b4a35.mockapi.io/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title":"New task","projectId":1,"completed":false,"status":"Pending","priority":"Medium","description":"","dueDate":1719494400}'
+```
+
+---
+
+#### PATCH `/tasks/{taskId}`
+
+Update a task — used to mark a task as done.
+
+| | |
+|---|---|
+| **Auth required** | Bearer token attached (if logged in) |
+| **Used by** | Mark task done |
+| **Source** | `TasksRemoteDataSource.markTaskDone()` |
+
+**Path parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `taskId` | int | Task ID to update |
+
+**Request body:**
+
+```json
+{
+  "completed": true,
+  "status": "Done"
+}
+```
+
+**Success response (200):** Updated task object.
+
+**curl example:**
+
+```bash
+curl -X PATCH https://6a3e00650443193a1a0b4a35.mockapi.io/tasks/1 \
+  -H "Content-Type: application/json" \
+  -d '{"completed":true,"status":"Done"}'
+```
+
+---
+
+#### DELETE `/projects/{projectId}/tasks/{taskId}`
+
+Delete a task nested under a project.
+
+| | |
+|---|---|
+| **Auth required** | Bearer token attached (if logged in) |
+| **Used by** | Delete task (swipe) |
+| **Source** | `TasksRemoteDataSource.deleteTask()` |
+
+**Path parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `projectId` | int | Parent project ID |
+| `taskId` | int | Task ID to delete |
+
+**Success response:** `200` or `204`. `404` is treated as success (idempotent delete).
+
+**curl example:**
+
+```bash
+curl -X DELETE https://6a3e00650443193a1a0b4a35.mockapi.io/projects/1/tasks/1
+```
+
+---
+
+### API Endpoint Summary
+
+| # | Method | Endpoint | Backend | Feature |
+|---|--------|----------|---------|---------|
+| 1 | POST | `/auth/login` | DummyJSON | Login |
+| 2 | POST | `/users/add` | DummyJSON | Register |
+| 3 | GET | `/auth/me` | DummyJSON | Profile |
+| 4 | POST | `/auth/refresh` | DummyJSON | Not implemented |
+| 5 | GET | `/projects?userId={id}` | MockAPI | List projects |
+| 6 | POST | `/projects` | MockAPI | Create project |
+| 7 | DELETE | `/projects/{id}` | MockAPI | Delete project |
+| 8 | GET | `/tasks?projectId={id}` | MockAPI | List tasks |
+| 9 | POST | `/tasks` | MockAPI | Add task |
+| 10 | PATCH | `/tasks/{id}` | MockAPI | Mark task done |
+| 11 | DELETE | `/projects/{id}/tasks/{taskId}` | MockAPI | Delete task |
+
+---
+
+### Local Storage (No REST API)
+
+The following data is persisted locally via SharedPreferences and is **not** backed by REST endpoints:
+
+| Data | Storage key area | Source |
+|------|------------------|--------|
+| Access & refresh tokens | Session storage | [session_storage.dart](lib/core/storage/session_storage.dart) |
+| User ID | Session storage | Saved on login/register |
+| Profile cache | Profile local datasource | [profile_local_datasource.dart](lib/features/profile/data/datasources/profile_local_datasource.dart) |
+| Theme mode | Theme storage | [theme_local_datasource.dart](lib/features/theme/data/datasources/theme_local_datasource.dart) |
 
 ---
 
 ## Packages
+
+Versions from [pubspec.yaml](pubspec.yaml):
 
 ### State Management
 
@@ -258,6 +651,9 @@ flutter_screenutil: ^5.9.3
 flutter_svg: ^2.3.0
 skeletonizer: ^2.1.3
 cached_network_image: ^3.4.1
+flutter_slidable: ^4.0.3
+flutter_native_splash: ^2.4.8
+flutter_launcher_icons: ^0.14.4
 ```
 
 ### Utilities
@@ -266,45 +662,59 @@ cached_network_image: ^3.4.1
 internet_connection_checker_plus: ^3.1.0
 ```
 
+### Dev Dependencies
+
+```yaml
+flutter_lints: ^6.0.0
+```
+
 ---
 
 ## Getting Started
 
 ### Prerequisites
 
-* Flutter SDK (latest stable version)
-* Dart SDK
-* Android Studio / VS Code
+- Flutter SDK (latest stable)
+- Dart SDK `^3.12.2`
+- Android Studio or VS Code
 
 ### Installation
 
-1. Clone the repository
+1. Clone the repository:
 
 ```bash
 git clone <repository-url>
 ```
 
-2. Navigate to the project directory
+2. Navigate to the project directory:
 
 ```bash
 cd taskmanager
 ```
 
-3. Install dependencies
+3. Install dependencies:
 
 ```bash
 flutter pub get
 ```
 
-4. Run the project
+4. Run the app:
 
 ```bash
 flutter run
 ```
 
----
+5. Log in with demo credentials (`emilys` / `emilyspass`) or register a new account.
 
-## Build APK
+### Run Tests
+
+```bash
+flutter test
+```
+
+> **Note:** [test/widget_test.dart](test/widget_test.dart) is still the default Flutter counter stub and does not yet test app features.
+
+### Build APK
 
 ```bash
 flutter build apk --release
@@ -314,20 +724,18 @@ flutter build apk --release
 
 ## Project Highlights
 
-* Clean Architecture
-* Repository Pattern
-* BLoC Pattern
-* Dependency Injection
-* Scalable Feature-Based Structure
-* Offline Support
-* API Integration
-* Responsive UI
-* Network Monitoring
-* Reusable Components
+- Clean Architecture with feature-based modules
+- Repository and use-case patterns
+- BLoC state management (separate blocs for projects and tasks)
+- Dependency injection with GetIt
+- Dual-backend API integration (DummyJSON + MockAPI)
+- Bearer token auth with local session persistence
+- Responsive UI with light/dark theme support
+- Network monitoring and reusable UI components
 
 ---
 
 ## Author
 
-Omar Abdelmonem
+Omar Abdelmonem  
 Flutter Developer
