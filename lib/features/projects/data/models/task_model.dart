@@ -14,18 +14,28 @@ class TaskModel extends TaskEntity {
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) {
-    final completed = json['completed'] ?? false;
+    final completed = json['completed'] == true;
     return TaskModel(
       id: _parseInt(json['id']),
       title: json['title'] ?? json['name'] ?? '',
       completed: completed,
       projectId: _parseInt(json['projectId']),
       userId: _parseInt(json['userId'] ?? json['userID']),
-      status: completed ? TaskStatus.done : TaskStatus.pending,
+      status: _parseStatus(json['status'], completed),
       description: json['description'] ?? '',
-      priority: json['priority'] ?? '',
+      priority: json['priority'] ?? 'Medium',
       dueDate: _parseInt(json['dueDate']),
     );
+  }
+
+  static TaskStatus _parseStatus(dynamic value, bool completed) {
+    if (completed) return TaskStatus.done;
+    final normalized = value?.toString().toLowerCase() ?? '';
+    if (normalized.contains('progress')) return TaskStatus.inProgress;
+    if (normalized == 'done' || normalized == 'completed') {
+      return TaskStatus.done;
+    }
+    return TaskStatus.pending;
   }
 
   static int _parseInt(dynamic value, [int fallback = 0]) {
@@ -42,10 +52,21 @@ class TaskModel extends TaskEntity {
       'completed': completed,
       'projectId': projectId,
       'userID': userId,
-      "description": description,
-      "status": status,
-      "priority": priority,
-      "dueDate": dueDate,
+      'description': description,
+      'status': _statusToString(status),
+      'priority': priority,
+      'dueDate': dueDate,
     };
+  }
+
+  static String _statusToString(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.done:
+        return 'Done';
+      case TaskStatus.inProgress:
+        return 'In Progress';
+      case TaskStatus.pending:
+        return 'Pending';
+    }
   }
 }

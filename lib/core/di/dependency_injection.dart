@@ -12,7 +12,10 @@ import '../../features/projects/data/datasources/projects_remote_datasource.dart
 import '../../features/projects/data/repositories/projects_repository_impl.dart';
 import '../../features/projects/domain/repositories/projects_repository.dart';
 import '../../features/projects/domain/usecases/add_task_usecase.dart';
+import '../../features/projects/domain/usecases/delete_project_usecase.dart';
+import '../../features/projects/domain/usecases/delete_task_usecase.dart';
 import '../../features/projects/domain/usecases/get_project_tasks_usecase.dart';
+import '../../features/projects/domain/usecases/create_project_usecase.dart';
 import '../../features/projects/domain/usecases/get_projects_usecase.dart';
 import '../../features/projects/domain/usecases/mark_task_done_usecase.dart';
 import '../../features/projects/presentation/bloc/projects_bloc.dart';
@@ -66,17 +69,23 @@ Future<void> setupDependencies() async {
 
   // ─── Projects Use Cases ────────────────────────────────────────────────
   sl.registerLazySingleton(() => GetProjectsUseCase(sl()));
+  sl.registerLazySingleton(() => CreateProjectUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteProjectUseCase(sl()));
   sl.registerLazySingleton(() => GetProjectTasksUseCase(sl()));
   sl.registerLazySingleton(() => AddTaskUseCase(sl()));
   sl.registerLazySingleton(() => MarkTaskDoneUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteTaskUseCase(sl()));
 
   // ─── Projects BLoC ─────────────────────────────────────────────────────
   sl.registerFactory(
     () => ProjectsBloc(
       getProjectsUseCase: sl(),
+      createProjectUseCase: sl(),
+      deleteProjectUseCase: sl(),
       getProjectTasksUseCase: sl(),
       addTaskUseCase: sl(),
       markTaskDoneUseCase: sl(),
+      deleteTaskUseCase: sl(),
     ),
   );
 }

@@ -13,6 +13,10 @@ class ProjectsInitial extends ProjectsState {}
 
 class ProjectsLoading extends ProjectsState {}
 
+class ProjectsEmpty extends ProjectsState {
+  const ProjectsEmpty();
+}
+
 class ProjectsLoaded extends ProjectsState {
   final List<ProjectEntity> projects;
   const ProjectsLoaded(this.projects);
@@ -43,6 +47,14 @@ class TaskAdded extends ProjectsState {
 class TaskMarkedDone extends ProjectsState {
   final List<TaskEntity> updatedTasks;
   const TaskMarkedDone(this.updatedTasks);
+
+  @override
+  List<Object?> get props => [updatedTasks];
+}
+
+class TaskDeleted extends ProjectsState {
+  final List<TaskEntity> updatedTasks;
+  const TaskDeleted(this.updatedTasks);
 
   @override
   List<Object?> get props => [updatedTasks];

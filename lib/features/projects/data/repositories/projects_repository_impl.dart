@@ -12,9 +12,37 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
       : _remoteDataSource = remoteDataSource;
 
   @override
-  Future<List<ProjectEntity>> getProjects() async {
+  Future<List<ProjectEntity>> getProjects({required int userId}) async {
     try {
-      return await _remoteDataSource.getProjects();
+      return await _remoteDataSource.getProjects(userId: userId);
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
+  Future<ProjectEntity> createProject({
+    required int userId,
+    required String name,
+    required String description,
+    String status = 'active',
+  }) async {
+    try {
+      return await _remoteDataSource.createProject(
+        userId: userId,
+        name: name,
+        description: description,
+        status: status,
+      );
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
+  Future<void> deleteProject(int projectId) async {
+    try {
+      await _remoteDataSource.deleteProject(projectId);
     } on ServerException catch (e) {
       throw ServerFailure(e.message);
     }
@@ -33,11 +61,13 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   Future<TaskEntity> addTask({
     required String title,
     required int projectId,
+    String priority = 'Medium',
   }) async {
     try {
       return await _remoteDataSource.addTask(
         title: title,
         projectId: projectId,
+        priority: priority,
       );
     } on ServerException catch (e) {
       throw ServerFailure(e.message);
@@ -48,6 +78,21 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   Future<TaskEntity> markTaskDone(int taskId) async {
     try {
       return await _remoteDataSource.markTaskDone(taskId);
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
+  Future<void> deleteTask({
+    required int taskId,
+    required int projectId,
+  }) async {
+    try {
+      await _remoteDataSource.deleteTask(
+        taskId: taskId,
+        projectId: projectId,
+      );
     } on ServerException catch (e) {
       throw ServerFailure(e.message);
     }

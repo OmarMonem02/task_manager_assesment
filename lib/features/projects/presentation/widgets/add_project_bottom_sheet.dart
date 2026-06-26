@@ -1,34 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class AddTaskBottomSheet extends StatefulWidget {
-  final int projectId;
-  final void Function(String title, String priority) onAdd;
+class AddProjectBottomSheet extends StatefulWidget {
+  final void Function(String name, String description) onAdd;
 
-  const AddTaskBottomSheet({
-    super.key,
-    required this.projectId,
-    required this.onAdd,
-  });
+  const AddProjectBottomSheet({super.key, required this.onAdd});
 
   @override
-  State<AddTaskBottomSheet> createState() => _AddTaskBottomSheetState();
+  State<AddProjectBottomSheet> createState() => _AddProjectBottomSheetState();
 }
 
-class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
-  final _controller = TextEditingController();
+class _AddProjectBottomSheetState extends State<AddProjectBottomSheet> {
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  String _priority = 'Medium';
 
   @override
   void dispose() {
-    _controller.dispose();
+    _nameController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      widget.onAdd(_controller.text.trim(), _priority);
+      widget.onAdd(
+        _nameController.text.trim(),
+        _descriptionController.text.trim(),
+      );
       Navigator.of(context).pop();
     }
   }
@@ -63,7 +62,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
               ),
               SizedBox(height: 20.h),
               Text(
-                'Add New Task',
+                'Create New Project',
                 style: TextStyle(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.bold,
@@ -72,37 +71,21 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
               ),
               SizedBox(height: 16.h),
               TextFormField(
-                controller: _controller,
+                controller: _nameController,
                 autofocus: true,
-                decoration: _inputDecoration('Task title...'),
+                decoration: _inputDecoration('Project name...'),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a task title';
+                    return 'Please enter a project name';
                   }
                   return null;
                 },
               ),
               SizedBox(height: 12.h),
-              Text(
-                'Priority',
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
-                ),
-              ),
-              SizedBox(height: 8.h),
-              DropdownButtonFormField<String>(
-                initialValue: _priority,
-                decoration: _inputDecoration('Select priority'),
-                items: const [
-                  DropdownMenuItem(value: 'Low', child: Text('Low')),
-                  DropdownMenuItem(value: 'Medium', child: Text('Medium')),
-                  DropdownMenuItem(value: 'High', child: Text('High')),
-                ],
-                onChanged: (value) {
-                  if (value != null) setState(() => _priority = value);
-                },
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 3,
+                decoration: _inputDecoration('Description (optional)'),
               ),
               SizedBox(height: 16.h),
               SizedBox(
@@ -119,7 +102,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                     elevation: 0,
                   ),
                   child: Text(
-                    'Add Task',
+                    'Create Project',
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w600,

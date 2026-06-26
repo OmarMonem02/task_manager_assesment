@@ -30,6 +30,8 @@ class DioFactory {
         connectTimeout: const Duration(milliseconds: ApiConstants.connectTimeout),
         receiveTimeout: const Duration(milliseconds: ApiConstants.receiveTimeout),
         headers: {'Content-Type': 'application/json'},
+        // MockAPI returns 404 for empty filtered lists — handle in datasource.
+        validateStatus: (status) => status != null && status < 500,
       ),
     );
 

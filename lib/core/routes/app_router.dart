@@ -13,8 +13,8 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: login,
     redirect: (context, state) async {
-      final isLoggedIn = await SharedPrefHelper.getAccessToken() != null &&
-          (await SharedPrefHelper.getAccessToken())!.isNotEmpty;
+      final token = await SharedPrefHelper.getAccessToken();
+      final isLoggedIn = token != null && token.isNotEmpty;
       final isOnLogin = state.matchedLocation == login;
 
       if (!isLoggedIn && !isOnLogin) return login;

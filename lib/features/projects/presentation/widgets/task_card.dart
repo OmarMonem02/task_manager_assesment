@@ -5,8 +5,14 @@ import '../../domain/entities/task_entity.dart';
 class TaskCard extends StatelessWidget {
   final TaskEntity task;
   final VoidCallback? onMarkDone;
+  final VoidCallback? onDelete;
 
-  const TaskCard({super.key, required this.task, this.onMarkDone});
+  const TaskCard({
+    super.key,
+    required this.task,
+    this.onMarkDone,
+    this.onDelete,
+  });
 
   Color _statusColor() {
     switch (task.status) {
@@ -30,6 +36,17 @@ class TaskCard extends StatelessWidget {
     }
   }
 
+  Color _priorityColor() {
+    switch (task.priority.toLowerCase()) {
+      case 'high':
+        return Colors.red;
+      case 'low':
+        return Colors.blue;
+      default:
+        return Colors.purple;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -39,7 +56,7 @@ class TaskCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -47,7 +64,6 @@ class TaskCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Checkbox
           GestureDetector(
             onTap: onMarkDone,
             child: AnimatedContainer(
@@ -72,40 +88,74 @@ class TaskCard extends StatelessWidget {
             ),
           ),
           SizedBox(width: 12.w),
-
-          // Title
           Expanded(
-            child: Text(
-              task.title,
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: task.completed
-                    ? Colors.grey[400]
-                    : const Color(0xFF1A1A2E),
-                decoration:
-                    task.completed ? TextDecoration.lineThrough : null,
-                fontWeight: FontWeight.w500,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: task.completed
+                        ? Colors.grey[400]
+                        : const Color(0xFF1A1A2E),
+                    decoration:
+                        task.completed ? TextDecoration.lineThrough : null,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 6.h),
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8.w,
+                        vertical: 4.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _statusColor().withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        _statusLabel(),
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          color: _statusColor(),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 6.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8.w,
+                        vertical: 4.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _priorityColor().withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        task.priority,
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          color: _priorityColor(),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          SizedBox(width: 8.w),
-
-          // Status Badge
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-            decoration: BoxDecoration(
-              color: _statusColor().withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6.r),
+          if (onDelete != null)
+            IconButton(
+              icon: Icon(Icons.delete_outline, color: Colors.red[300]),
+              onPressed: onDelete,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
             ),
-            child: Text(
-              _statusLabel(),
-              style: TextStyle(
-                fontSize: 10.sp,
-                color: _statusColor(),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
         ],
       ),
     );

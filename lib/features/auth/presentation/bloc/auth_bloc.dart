@@ -48,8 +48,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    await _logoutUseCase();
-    emit(AuthUnauthenticated());
+    try {
+      await _logoutUseCase();
+      emit(AuthUnauthenticated());
+    } catch (_) {
+      emit(const AuthError('Failed to logout'));
+    }
   }
 
   Future<void> _onCheckAuthRequested(

@@ -14,7 +14,7 @@ class ProjectModel extends ProjectEntity {
     return ProjectModel(
       id: _parseInt(json['id']),
       name: json['name'] ?? '',
-      userId: _parseInt(json['userId']),
+      userId: _parseInt(json['userId'] ?? json['userID']),
       createdAt: _parseInt(json['createdAt']),
       description: json['description'] ?? '',
       status: json['status'] ?? '',

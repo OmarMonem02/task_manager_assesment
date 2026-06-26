@@ -9,6 +9,26 @@ abstract class ProjectsEvent extends Equatable {
 
 class GetProjectsRequested extends ProjectsEvent {}
 
+class CreateProjectRequested extends ProjectsEvent {
+  final String name;
+  final String description;
+  const CreateProjectRequested({
+    required this.name,
+    required this.description,
+  });
+
+  @override
+  List<Object?> get props => [name, description];
+}
+
+class DeleteProjectRequested extends ProjectsEvent {
+  final int projectId;
+  const DeleteProjectRequested(this.projectId);
+
+  @override
+  List<Object?> get props => [projectId];
+}
+
 class GetProjectTasksRequested extends ProjectsEvent {
   final int projectId;
   const GetProjectTasksRequested(this.projectId);
@@ -20,10 +40,27 @@ class GetProjectTasksRequested extends ProjectsEvent {
 class AddTaskRequested extends ProjectsEvent {
   final String title;
   final int projectId;
-  const AddTaskRequested({required this.title, required this.projectId});
+  final String priority;
+  const AddTaskRequested({
+    required this.title,
+    required this.projectId,
+    this.priority = 'Medium',
+  });
 
   @override
-  List<Object?> get props => [title, projectId];
+  List<Object?> get props => [title, projectId, priority];
+}
+
+class DeleteTaskRequested extends ProjectsEvent {
+  final int taskId;
+  final int projectId;
+  const DeleteTaskRequested({
+    required this.taskId,
+    required this.projectId,
+  });
+
+  @override
+  List<Object?> get props => [taskId, projectId];
 }
 
 class MarkTaskDoneRequested extends ProjectsEvent {

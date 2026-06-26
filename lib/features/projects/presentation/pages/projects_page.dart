@@ -4,11 +4,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/routes/app_router.dart';
+import '../../../auth/domain/usecases/logout_usecase.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../bloc/projects_bloc.dart';
 import '../bloc/projects_event.dart';
 import '../bloc/projects_state.dart';
+import '../widgets/delete_confirmation_dialog.dart';
+import '../widgets/add_project_bottom_sheet.dart';
 import '../widgets/project_card.dart';
 import '../widgets/empty_projects.dart';
 import '../widgets/skeleton_card.dart';
@@ -33,6 +36,55 @@ class ProjectsPage extends StatelessWidget {
 class _ProjectsView extends StatelessWidget {
   const _ProjectsView();
 
+  void _showCreateProjectSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddProjectBottomSheet(
+        onAdd: (name, description) {
+          context.read<ProjectsBloc>().add(
+                CreateProjectRequested(name: name, description: description),
+              );
+        },
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteProject(
+    BuildContext context,
+    int projectId,
+    String projectName,
+  ) async {
+    final confirmed = await showDeleteConfirmation(
+      context,
+      title: 'Delete Project',
+      message: 'Are you sure you want to delete "$projectName"?',
+    );
+    if (confirmed && context.mounted) {
+      context.read<ProjectsBloc>().add(DeleteProjectRequested(projectId));
+    }
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await sl<LogoutUseCase>()();
+      if (context.mounted) {
+        context.read<AuthBloc>().add(LogoutRequested());
+        context.go(AppRouter.login);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to logout. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,10 +103,7 @@ class _ProjectsView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout_outlined, color: Color(0xFF1A1A2E)),
-            onPressed: () {
-              context.read<AuthBloc>().add(LogoutRequested());
-              context.go(AppRouter.login);
-            },
+            onPressed: () => _logout(context),
           ),
         ],
       ),
@@ -88,11 +137,27 @@ class _ProjectsView extends StatelessWidget {
             );
           }
 
-          if (state is ProjectsLoaded) {
-            if (state.projects.isEmpty) {
-              return const EmptyProjects();
-            }
+          if (state is ProjectsEmpty) {
+            return RefreshIndicator(
+              color: const Color(0xFF6C63FF),
+              onRefresh: () async {
+                context.read<ProjectsBloc>().add(GetProjectsRequested());
+              },
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.65,
+                    child: EmptyProjects(
+                      onCreateProject: () => _showCreateProjectSheet(context),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
 
+          if (state is ProjectsLoaded) {
             return RefreshIndicator(
               color: const Color(0xFF6C63FF),
               onRefresh: () async {
@@ -110,12 +175,29 @@ class _ProjectsView extends StatelessWidget {
                       '/projects/${project.id}',
                       extra: project,
                     ),
+                    onDelete: () => _confirmDeleteProject(
+                      context,
+                      project.id,
+                      project.name,
+                    ),
                   );
                 },
               ),
             );
           }
 
+          return const SizedBox.shrink();
+        },
+      ),
+      floatingActionButton: BlocBuilder<ProjectsBloc, ProjectsState>(
+        builder: (context, state) {
+          if (state is ProjectsLoaded || state is ProjectsEmpty || state is ProjectsError) {
+            return FloatingActionButton(
+              onPressed: () => _showCreateProjectSheet(context),
+              backgroundColor: const Color(0xFF6C63FF),
+              child: const Icon(Icons.add, color: Colors.white),
+            );
+          }
           return const SizedBox.shrink();
         },
       ),
