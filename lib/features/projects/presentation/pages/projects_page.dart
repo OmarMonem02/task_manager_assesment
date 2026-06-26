@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/routes/app_router.dart';
-import '../../../auth/domain/usecases/logout_usecase.dart';
-import '../../../auth/presentation/bloc/auth_bloc.dart';
-import '../../../auth/presentation/bloc/auth_event.dart';
 import '../bloc/projects_bloc.dart';
 import '../bloc/projects_event.dart';
 import '../bloc/projects_state.dart';
@@ -21,13 +19,8 @@ class ProjectsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (_) => sl<ProjectsBloc>()..add(GetProjectsRequested()),
-        ),
-        BlocProvider(create: (_) => sl<AuthBloc>()),
-      ],
+    return BlocProvider(
+      create: (_) => sl<ProjectsBloc>()..add(GetProjectsRequested()),
       child: const _ProjectsView(),
     );
   }
@@ -51,38 +44,19 @@ class _ProjectsView extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDeleteProject(
+  Future<bool> _confirmDeleteProject(
     BuildContext context,
-    int projectId,
     String projectName,
-  ) async {
-    final confirmed = await showDeleteConfirmation(
+  ) {
+    return showDeleteConfirmation(
       context,
       title: 'Delete Project',
       message: 'Are you sure you want to delete "$projectName"?',
     );
-    if (confirmed && context.mounted) {
-      context.read<ProjectsBloc>().add(DeleteProjectRequested(projectId));
-    }
   }
 
-  Future<void> _logout(BuildContext context) async {
-    try {
-      await sl<LogoutUseCase>()();
-      if (context.mounted) {
-        context.read<AuthBloc>().add(LogoutRequested());
-        context.go(AppRouter.login);
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to logout. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+  void _deleteProject(BuildContext context, int projectId) {
+    context.read<ProjectsBloc>().add(DeleteProjectRequested(projectId));
   }
 
   @override
@@ -102,8 +76,8 @@ class _ProjectsView extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_outlined, color: Color(0xFF1A1A2E)),
-            onPressed: () => _logout(context),
+            icon: const Icon(Icons.person_outline, color: Color(0xFF1A1A2E)),
+            onPressed: () => context.push(AppRouter.profile),
           ),
         ],
       ),
@@ -163,25 +137,27 @@ class _ProjectsView extends StatelessWidget {
               onRefresh: () async {
                 context.read<ProjectsBloc>().add(GetProjectsRequested());
               },
-              child: ListView.separated(
-                padding: EdgeInsets.all(16.r),
-                itemCount: state.projects.length,
-                separatorBuilder: (_, __) => SizedBox(height: 12.h),
-                itemBuilder: (context, index) {
-                  final project = state.projects[index];
-                  return ProjectCard(
-                    project: project,
-                    onTap: () => context.push(
-                      '/projects/${project.id}',
-                      extra: project,
-                    ),
-                    onDelete: () => _confirmDeleteProject(
-                      context,
-                      project.id,
-                      project.name,
-                    ),
-                  );
-                },
+              child: SlidableAutoCloseBehavior(
+                child: ListView.separated(
+                  padding: EdgeInsets.all(16.r),
+                  itemCount: state.projects.length,
+                  separatorBuilder: (_, __) => SizedBox(height: 12.h),
+                  itemBuilder: (context, index) {
+                    final project = state.projects[index];
+                    return ProjectCard(
+                      project: project,
+                      onTap: () => context.push(
+                        '/projects/${project.id}',
+                        extra: project,
+                      ),
+                      onConfirmDelete: () => _confirmDeleteProject(
+                        context,
+                        project.name,
+                      ),
+                      onDelete: () => _deleteProject(context, project.id),
+                    );
+                  },
+                ),
               ),
             );
           }

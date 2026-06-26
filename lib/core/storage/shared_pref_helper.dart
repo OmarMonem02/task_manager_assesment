@@ -6,6 +6,8 @@ class SharedPrefHelper {
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userIdKey = 'user_id';
+  static const String _usernameKey = 'username';
+  static const String _emailKey = 'email';
 
   static Future<void> saveAccessToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -35,6 +37,23 @@ class SharedPrefHelper {
   static Future<int?> getUserId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_userIdKey);
+  }
+
+  static Future<void> saveUserProfile({
+    required String username,
+    required String email,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_usernameKey, username);
+    await prefs.setString(_emailKey, email);
+  }
+
+  static Future<Map<String, String>?> getUserProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString(_usernameKey);
+    final email = prefs.getString(_emailKey);
+    if (username == null || email == null) return null;
+    return {'username': username, 'email': email};
   }
 
   static Future<void> clearAll() async {

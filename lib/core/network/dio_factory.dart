@@ -15,6 +15,19 @@ class DioFactory {
         headers: {'Content-Type': 'application/json'},
       ),
     );
+
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await SharedPrefHelper.getAccessToken();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+      ),
+    );
+
     dio.interceptors.add(PrettyDioLogger(
       requestHeader: true,
       requestBody: true,

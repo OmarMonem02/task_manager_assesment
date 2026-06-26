@@ -30,6 +30,10 @@ class AuthRepositoryImpl implements AuthRepository {
         refreshToken: user.refreshToken,
         userId: user.id,
       );
+      await _localDataSource.saveUserProfile(
+        username: user.username,
+        email: user.email,
+      );
       return user;
     } on UnauthorizedException catch (e) {
       throw UnauthorizedFailure(e.message);
@@ -53,6 +57,10 @@ class AuthRepositoryImpl implements AuthRepository {
         accessToken: user.accessToken,
         refreshToken: user.refreshToken,
         userId: user.id,
+      );
+      await _localDataSource.saveUserProfile(
+        username: user.username,
+        email: user.email,
       );
       return user;
     } on UnauthorizedException catch (e) {

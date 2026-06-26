@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/projects/presentation/pages/projects_page.dart';
 import '../../features/projects/presentation/pages/project_details_page.dart';
 import '../../features/projects/domain/entities/project_entity.dart';
@@ -10,6 +11,7 @@ class AppRouter {
   static const String login = '/login';
   static const String register = '/register';
   static const String projects = '/projects';
+  static const String profile = '/profile';
   static const String projectDetails = '/projects/:id';
 
   static final GoRouter router = GoRouter(
@@ -36,6 +38,10 @@ class AppRouter {
       GoRoute(
         path: projects,
         builder: (context, state) => const ProjectsPage(),
+      ),
+      GoRoute(
+        path: profile,
+        builder: (context, state) => const ProfilePage(),
       ),
       GoRoute(
         path: projectDetails,

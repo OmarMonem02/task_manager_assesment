@@ -9,6 +9,11 @@ import '../../features/auth/domain/usecases/login_usecase.dart';
 import '../../features/auth/domain/usecases/logout_usecase.dart';
 import '../../features/auth/domain/usecases/register_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/profile/data/datasources/profile_local_datasource.dart';
+import '../../features/profile/data/repositories/profile_repository_impl.dart';
+import '../../features/profile/domain/repositories/profile_repository.dart';
+import '../../features/profile/domain/usecases/get_profile_usecase.dart';
+import '../../features/profile/presentation/bloc/profile_bloc.dart';
 import '../../features/projects/data/datasources/projects_remote_datasource.dart';
 import '../../features/projects/data/repositories/projects_repository_impl.dart';
 import '../../features/projects/domain/repositories/projects_repository.dart';
@@ -57,6 +62,30 @@ Future<void> setupDependencies() async {
       registerUseCase: sl(),
       logoutUseCase: sl(),
       checkAuthUseCase: sl(),
+    ),
+  );
+
+  // ─── Profile DataSources ───────────────────────────────────────────────
+  sl.registerLazySingleton<ProfileLocalDataSource>(
+    () => ProfileLocalDataSourceImpl(),
+  );
+
+  // ─── Profile Repository ────────────────────────────────────────────────
+  sl.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepositoryImpl(
+      localDataSource: sl(),
+      authRepository: sl(),
+    ),
+  );
+
+  // ─── Profile Use Cases ─────────────────────────────────────────────────
+  sl.registerLazySingleton(() => GetProfileUseCase(sl()));
+
+  // ─── Profile BLoC ──────────────────────────────────────────────────────
+  sl.registerFactory(
+    () => ProfileBloc(
+      getProfileUseCase: sl(),
+      logoutUseCase: sl(),
     ),
   );
 

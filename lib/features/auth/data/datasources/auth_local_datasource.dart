@@ -7,6 +7,11 @@ abstract class AuthLocalDataSource {
     required String refreshToken,
     required int userId,
   });
+  Future<void> saveUserProfile({
+    required String username,
+    required String email,
+  });
+  Future<Map<String, String>?> getUserProfile();
   Future<String?> getAccessToken();
   Future<bool> isLoggedIn();
   Future<void> clearTokens();
@@ -26,6 +31,26 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     } catch (e) {
       throw CacheException('Failed to save tokens');
     }
+  }
+
+  @override
+  Future<void> saveUserProfile({
+    required String username,
+    required String email,
+  }) async {
+    try {
+      await SharedPrefHelper.saveUserProfile(
+        username: username,
+        email: email,
+      );
+    } catch (e) {
+      throw CacheException('Failed to save user profile');
+    }
+  }
+
+  @override
+  Future<Map<String, String>?> getUserProfile() async {
+    return SharedPrefHelper.getUserProfile();
   }
 
   @override
