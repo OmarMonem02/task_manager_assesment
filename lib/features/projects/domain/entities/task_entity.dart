@@ -9,6 +9,9 @@ class TaskEntity extends Equatable {
   final int projectId;
   final int userId;
   final TaskStatus status;
+  final String description;
+  final String priority;
+  final int dueDate;
 
   const TaskEntity({
     required this.id,
@@ -17,6 +20,9 @@ class TaskEntity extends Equatable {
     required this.projectId,
     required this.userId,
     this.status = TaskStatus.pending,
+    required this.description,
+    required this.priority,
+    required this.dueDate,
   });
 
   TaskEntity copyWith({
@@ -26,6 +32,9 @@ class TaskEntity extends Equatable {
     int? projectId,
     int? userId,
     TaskStatus? status,
+    String? description,
+    String? priority,
+    int? dueDate,
   }) {
     return TaskEntity(
       id: id ?? this.id,
@@ -34,9 +43,12 @@ class TaskEntity extends Equatable {
       projectId: projectId ?? this.projectId,
       userId: userId ?? this.userId,
       status: status ?? this.status,
+      description: description ?? this.description,
+      priority: priority ?? this.priority,
+      dueDate: dueDate ?? this.dueDate,
     );
   }
 
   @override
-  List<Object?> get props => [id, title, completed, projectId, userId, status];
+  List<Object?> get props => [id, title, completed, projectId, userId, status, description, priority, dueDate];
 }

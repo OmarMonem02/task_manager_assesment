@@ -31,7 +31,7 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
     try {
       final response = await _dio.get(
         ApiConstants.todosEndpoint,
-        queryParameters: {'albumId': projectId},
+        queryParameters: {'projectId': projectId},
       );
       final List data = response.data;
       return data.map((e) => TaskModel.fromJson(e)).toList();
@@ -50,9 +50,8 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
         ApiConstants.todosEndpoint,
         data: {
           'title': title,
-          'albumId': projectId,
+          'projectId': projectId,
           'completed': false,
-          'userId': 1,
         },
       );
       return TaskModel.fromJson(response.data);

@@ -7,28 +7,45 @@ class TaskModel extends TaskEntity {
     required super.completed,
     required super.projectId,
     required super.userId,
-    super.status,
+    required super.description,
+    required super.status,
+    required super.priority,
+    required super.dueDate,
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) {
     final completed = json['completed'] ?? false;
     return TaskModel(
-      id: json['id'],
-      title: json['title'] ?? '',
+      id: _parseInt(json['id']),
+      title: json['title'] ?? json['name'] ?? '',
       completed: completed,
-      projectId: json['albumId'] ?? json['projectId'] ?? 0,
-      userId: json['userId'] ?? 0,
+      projectId: _parseInt(json['projectId']),
+      userId: _parseInt(json['userId'] ?? json['userID']),
       status: completed ? TaskStatus.done : TaskStatus.pending,
+      description: json['description'] ?? '',
+      priority: json['priority'] ?? '',
+      dueDate: _parseInt(json['dueDate']),
     );
   }
+
+  static int _parseInt(dynamic value, [int fallback = 0]) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'title': title,
       'completed': completed,
-      'albumId': projectId,
-      'userId': userId,
+      'projectId': projectId,
+      'userID': userId,
+      "description": description,
+      "status": status,
+      "priority": priority,
+      "dueDate": dueDate,
     };
   }
 }

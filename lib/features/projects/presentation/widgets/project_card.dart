@@ -36,7 +36,7 @@ class ProjectCard extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  project.title[0].toUpperCase(),
+                  project.name[0].toUpperCase(),
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
@@ -51,7 +51,7 @@ class ProjectCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    project.title,
+                    project.name,
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,

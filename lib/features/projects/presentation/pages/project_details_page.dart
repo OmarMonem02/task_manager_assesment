@@ -56,7 +56,7 @@ class _ProjectDetailsView extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          project.title,
+          project.name,
           style: TextStyle(
             fontSize: 16.sp,
             fontWeight: FontWeight.bold,
