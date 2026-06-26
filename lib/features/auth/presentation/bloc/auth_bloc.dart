@@ -3,23 +3,28 @@ import '../../../../core/errors/failures.dart';
 import '../../domain/usecases/check_auth_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
+import '../../domain/usecases/register_usecase.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase _loginUseCase;
+  final RegisterUseCase _registerUseCase;
   final LogoutUseCase _logoutUseCase;
   final CheckAuthUseCase _checkAuthUseCase;
 
   AuthBloc({
     required LoginUseCase loginUseCase,
+    required RegisterUseCase registerUseCase,
     required LogoutUseCase logoutUseCase,
     required CheckAuthUseCase checkAuthUseCase,
   })  : _loginUseCase = loginUseCase,
+        _registerUseCase = registerUseCase,
         _logoutUseCase = logoutUseCase,
         _checkAuthUseCase = checkAuthUseCase,
         super(AuthInitial()) {
     on<LoginRequested>(_onLoginRequested);
+    on<RegisterRequested>(_onRegisterRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<CheckAuthRequested>(_onCheckAuthRequested);
   }
@@ -32,6 +37,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final user = await _loginUseCase(
         username: event.username,
+        password: event.password,
+      );
+      emit(AuthAuthenticated(user));
+    } on UnauthorizedFailure catch (e) {
+      emit(AuthError(e.message));
+    } on ServerFailure catch (e) {
+      emit(AuthError(e.message));
+    } catch (e) {
+      emit(const AuthError('Something went wrong'));
+    }
+  }
+
+  Future<void> _onRegisterRequested(
+    RegisterRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final user = await _registerUseCase(
+        username: event.username,
+        email: event.email,
         password: event.password,
       );
       emit(AuthAuthenticated(user));

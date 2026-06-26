@@ -7,6 +7,7 @@ import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/check_auth_usecase.dart';
 import '../../features/auth/domain/usecases/login_usecase.dart';
 import '../../features/auth/domain/usecases/logout_usecase.dart';
+import '../../features/auth/domain/usecases/register_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/projects/data/datasources/projects_remote_datasource.dart';
 import '../../features/projects/data/repositories/projects_repository_impl.dart';
@@ -45,6 +46,7 @@ Future<void> setupDependencies() async {
 
   // ─── Auth Use Cases ────────────────────────────────────────────────────
   sl.registerLazySingleton(() => LoginUseCase(sl()));
+  sl.registerLazySingleton(() => RegisterUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => CheckAuthUseCase(sl()));
 
@@ -52,6 +54,7 @@ Future<void> setupDependencies() async {
   sl.registerFactory(
     () => AuthBloc(
       loginUseCase: sl(),
+      registerUseCase: sl(),
       logoutUseCase: sl(),
       checkAuthUseCase: sl(),
     ),

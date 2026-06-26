@@ -2,6 +2,7 @@ class ApiConstants {
   // Auth API - dummyjson
   static const String authBaseUrl = 'https://dummyjson.com';
   static const String loginEndpoint = '/auth/login';
+  static const String registerEndpoint = '/users/add';
   static const String getMeEndpoint = '/auth/me';
   static const String refreshTokenEndpoint = '/auth/refresh';
 

@@ -44,11 +44,11 @@ class _LoginViewState extends State<_LoginView> {
   void _onLogin(BuildContext context) {
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(
-            LoginRequested(
-              username: _usernameController.text.trim(),
-              password: _passwordController.text.trim(),
-            ),
-          );
+        LoginRequested(
+          username: _usernameController.text.trim(),
+          password: _passwordController.text.trim(),
+        ),
+      );
     }
   }
 
@@ -60,10 +60,7 @@ class _LoginViewState extends State<_LoginView> {
           context.go(AppRouter.projects);
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
           );
         }
       },
@@ -90,10 +87,7 @@ class _LoginViewState extends State<_LoginView> {
                   SizedBox(height: 8.h),
                   Text(
                     'Sign in to continue',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 16.sp, color: Colors.grey[600]),
                   ),
                   SizedBox(height: 48.h),
 
@@ -198,12 +192,50 @@ class _LoginViewState extends State<_LoginView> {
                     },
                   ),
 
-                  SizedBox(height: 24.h),
-
-                  // Hint
+                  SizedBox(height: 14.h),
+                  Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Don\'t have an account?',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => context.go(AppRouter.register),
+                          child: Text(
+                            'Sign up',
+                            style: TextStyle(color: Colors.blue),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
                   Center(
                     child: Text(
-                      'Use: emilys / emilyspass',
+                      'Use this dummy credentials to login:',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Text(
+                      'emilys / emilyspass',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Text(
+                      'emmaj  / emmajpass',
                       style: TextStyle(
                         fontSize: 12.sp,
                         color: Colors.grey[500],
@@ -218,6 +250,4 @@ class _LoginViewState extends State<_LoginView> {
       ),
     );
   }
-
-  
 }
