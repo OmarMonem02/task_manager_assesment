@@ -53,6 +53,7 @@ class SyncRepositoryImpl implements SyncRepository {
 
       final entries = await _syncQueueLocalDataSource.getEntries(userId);
       final projectIdMap = <int, int>{};
+      final preservedSyncedTaskIds = <int>{};
       var pushed = 0;
       var failed = 0;
 
@@ -123,20 +124,17 @@ class SyncRepositoryImpl implements SyncRepository {
               userId: userId,
               projectId: remoteProjectId,
               oldId: entry.localEntityId,
-              updatedTask: LocalTaskRecord(
-                id: syncedTask.id,
-                title: syncedTask.title,
-                completed: syncedTask.completed,
-                projectId: syncedTask.projectId,
-                userId: syncedTask.userId,
-                status: syncedTask.status,
-                description: syncedTask.description,
-                priority: syncedTask.priority,
-                dueDate: syncedTask.dueDate,
-                syncStatus: SyncStatus.synced,
+              updatedTask: LocalTaskRecord.fromRemote(
+                syncedTask,
+                userId: userId,
               ),
             );
+          } else {
+            await _tasksLocalDataSource.saveTask(
+              LocalTaskRecord.fromRemote(syncedTask, userId: userId),
+            );
           }
+          preservedSyncedTaskIds.add(syncedTask.id);
           await _syncQueueLocalDataSource.removeEntry(entry.id);
           pushed++;
         } catch (_) {
@@ -213,12 +211,18 @@ class SyncRepositoryImpl implements SyncRepository {
         }
       }
 
-      await _pullRemoteData(userId);
+      await _pullRemoteData(
+        userId,
+        preserveSyncedTaskIds: preservedSyncedTaskIds,
+      );
       return SyncResult(pushed: pushed, failed: failed);
     });
   }
 
-  Future<void> _pullRemoteData(int userId) async {
+  Future<void> _pullRemoteData(
+    int userId, {
+    Set<int> preserveSyncedTaskIds = const {},
+  }) async {
     final remoteProjects =
         await _projectsRemoteDataSource.getProjects(userId: userId);
     await _projectsLocalDataSource.upsertRemoteProjects(userId, remoteProjects);
@@ -230,6 +234,8 @@ class SyncRepositoryImpl implements SyncRepository {
         userId,
         project.id,
         remoteTasks,
+        preserveSyncedTaskIds: preserveSyncedTaskIds,
+        reconcileDeletions: true,
       );
     }
   }

@@ -56,20 +56,25 @@ class TasksRepositoryImpl implements TasksRepository {
 
       if (await _connectivityService.isOnline) {
         try {
-          final remoteModels =
-              await _remoteDataSource.getProjectTasks(projectId);
-          await _localDataSource.upsertRemoteTasks(
-            userId,
-            projectId,
-            remoteModels,
-          );
+          final projectIds =
+              await _projectsLocalDataSource.expandProjectIds(userId, projectId);
+          for (final id in projectIds) {
+            final remoteModels = await _remoteDataSource.getProjectTasks(id);
+            await _localDataSource.upsertRemoteTasks(
+              userId,
+              id,
+              remoteModels,
+            );
+          }
         } catch (_) {
           // Fall back to local cache when remote refresh fails.
         }
       }
 
+      final projectIds =
+          await _projectsLocalDataSource.expandProjectIds(userId, projectId);
       final localTasks =
-          await _localDataSource.getProjectTasks(userId, projectId);
+          await _localDataSource.getTasksForProjects(userId, projectIds);
       return localTasks.map((task) => task.toEntity()).toList();
     });
   }
@@ -95,18 +100,7 @@ class TasksRepositoryImpl implements TasksRepository {
           priority: priority,
         );
         await _localDataSource.saveTask(
-          LocalTaskRecord(
-            id: model.id,
-            title: model.title,
-            completed: model.completed,
-            projectId: model.projectId,
-            userId: model.userId,
-            status: model.status,
-            description: model.description,
-            priority: model.priority,
-            dueDate: model.dueDate,
-            syncStatus: SyncStatus.synced,
-          ),
+          LocalTaskRecord.fromRemote(model, userId: userId),
         );
         return model.toEntity();
       }
@@ -160,18 +154,7 @@ class TasksRepositoryImpl implements TasksRepository {
           task.syncStatus == SyncStatus.synced) {
         final model = await _remoteDataSource.markTaskDone(taskId);
         await _localDataSource.saveTask(
-          LocalTaskRecord(
-            id: model.id,
-            title: model.title,
-            completed: model.completed,
-            projectId: model.projectId,
-            userId: model.userId,
-            status: model.status,
-            description: model.description,
-            priority: model.priority,
-            dueDate: model.dueDate,
-            syncStatus: SyncStatus.synced,
-          ),
+          LocalTaskRecord.fromRemote(model, userId: userId),
         );
         return model.toEntity();
       }

@@ -1,3 +1,4 @@
+import 'task_model.dart';
 import '../../domain/entities/task_entity.dart';
 import 'sync_status.dart';
 
@@ -28,20 +29,46 @@ class LocalTaskRecord {
 
   factory LocalTaskRecord.fromJson(Map<dynamic, dynamic> json) {
     return LocalTaskRecord(
-      id: json['id'] as int,
+      id: _parseInt(json['id']),
       title: json['title'] as String? ?? '',
       completed: json['completed'] as bool? ?? false,
-      projectId: json['projectId'] as int,
-      userId: json['userId'] as int,
+      projectId: _parseInt(json['projectId']),
+      userId: _parseInt(json['userId']),
       status: TaskStatus.values.firstWhere(
         (value) => value.name == (json['status'] as String? ?? 'pending'),
         orElse: () => TaskStatus.pending,
       ),
       description: json['description'] as String? ?? '',
       priority: json['priority'] as String? ?? 'Medium',
-      dueDate: json['dueDate'] as int? ?? 0,
+      dueDate: _parseInt(json['dueDate']),
       syncStatus: SyncStatusX.fromName(json['syncStatus'] as String? ?? 'synced'),
     );
+  }
+
+  factory LocalTaskRecord.fromRemote(
+    TaskModel model, {
+    required int userId,
+    SyncStatus syncStatus = SyncStatus.synced,
+  }) {
+    return LocalTaskRecord(
+      id: model.id,
+      title: model.title,
+      completed: model.completed,
+      projectId: model.projectId,
+      userId: userId,
+      status: model.status,
+      description: model.description,
+      priority: model.priority,
+      dueDate: model.dueDate,
+      syncStatus: syncStatus,
+    );
+  }
+
+  static int _parseInt(dynamic value, [int fallback = 0]) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
   }
 
   Map<String, dynamic> toJson() {

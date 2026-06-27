@@ -5,6 +5,10 @@ import '../models/task_model.dart';
 
 abstract class TasksLocalDataSource {
   Future<List<LocalTaskRecord>> getProjectTasks(int userId, int projectId);
+  Future<List<LocalTaskRecord>> getTasksForProjects(
+    int userId,
+    Set<int> projectIds,
+  );
   Future<LocalTaskRecord?> getTask(int userId, int taskId);
   Future<void> saveTask(LocalTaskRecord task);
   Future<void> removeTask(int userId, int projectId, int taskId);
@@ -20,8 +24,10 @@ abstract class TasksLocalDataSource {
   Future<void> upsertRemoteTasks(
     int userId,
     int projectId,
-    List<TaskModel> remoteTasks,
-  );
+    List<TaskModel> remoteTasks, {
+    Set<int> preserveSyncedTaskIds = const {},
+    bool reconcileDeletions = false,
+  });
   Future<void> clearUserData(int userId);
 }
 
@@ -37,21 +43,53 @@ class TasksLocalDataSourceImpl implements TasksLocalDataSource {
 
   String _nextIdKey(int userId) => 'next_task_id_$userId';
 
+  int? _taskIdFromKey(String key) {
+    if (!key.startsWith('t_')) return null;
+    final lastSeparator = key.lastIndexOf('_');
+    if (lastSeparator <= 2) return null;
+    return int.tryParse(key.substring(lastSeparator + 1));
+  }
+
   @override
   Future<List<LocalTaskRecord>> getProjectTasks(
     int userId,
     int projectId,
+  ) {
+    return getTasksForProjects(userId, {projectId});
+  }
+
+  @override
+  Future<List<LocalTaskRecord>> getTasksForProjects(
+    int userId,
+    Set<int> projectIds,
   ) async {
+    if (projectIds.isEmpty) return [];
+
     final box = HiveStorage.tasksBox;
-    final prefix = _projectPrefix(userId, projectId);
     final tasks = <LocalTaskRecord>[];
 
-    for (final key in box.keys) {
-      if (key is! String || !key.startsWith(prefix)) continue;
+    for (final key in box.keys.toList()) {
+      if (key is! String || !key.startsWith('t_')) continue;
       final raw = box.get(key);
       if (raw is! Map) continue;
-      final record = LocalTaskRecord.fromJson(raw);
+
+      var record = LocalTaskRecord.fromJson(raw);
       if (record.syncStatus == SyncStatus.pendingDelete) continue;
+      if (!projectIds.contains(record.projectId)) continue;
+
+      final belongsToUser =
+          record.userId == userId || record.userId == 0;
+      if (!belongsToUser) continue;
+
+      if (record.userId == 0) {
+        record = record.copyWith(userId: userId);
+      }
+
+      final canonicalKey = _key(record.userId, record.projectId, record.id);
+      if (key != canonicalKey) {
+        await box.delete(key);
+      }
+      await saveTask(record);
       tasks.add(record);
     }
 
@@ -60,14 +98,27 @@ class TasksLocalDataSourceImpl implements TasksLocalDataSource {
 
   @override
   Future<LocalTaskRecord?> getTask(int userId, int taskId) async {
-    final prefix = _userPrefix(userId);
     for (final key in HiveStorage.tasksBox.keys) {
-      if (key is! String || !key.startsWith(prefix)) continue;
-      if (!key.endsWith('_$taskId')) continue;
+      if (key is! String || !key.startsWith('t_')) continue;
+      if (_taskIdFromKey(key) != taskId) continue;
       final raw = HiveStorage.tasksBox.get(key);
       if (raw is! Map) continue;
-      return LocalTaskRecord.fromJson(raw);
+
+      var record = LocalTaskRecord.fromJson(raw);
+      if (record.userId != userId && record.userId != 0) continue;
+
+      if (record.userId == 0) {
+        record = record.copyWith(userId: userId);
+        final canonicalKey = _key(record.userId, record.projectId, record.id);
+        if (key != canonicalKey) {
+          await HiveStorage.tasksBox.delete(key);
+        }
+        await saveTask(record);
+      }
+
+      return record;
     }
+
     return null;
   }
 
@@ -108,7 +159,13 @@ class TasksLocalDataSourceImpl implements TasksLocalDataSource {
     required int oldId,
     required LocalTaskRecord updatedTask,
   }) async {
-    await HiveStorage.tasksBox.delete(_key(userId, projectId, oldId));
+    final prefix = _userPrefix(userId);
+    for (final key in HiveStorage.tasksBox.keys.toList()) {
+      if (key is! String || !key.startsWith(prefix)) continue;
+      if (_taskIdFromKey(key) != oldId) continue;
+      await HiveStorage.tasksBox.delete(key);
+      break;
+    }
     await saveTask(updatedTask);
   }
 
@@ -139,33 +196,36 @@ class TasksLocalDataSourceImpl implements TasksLocalDataSource {
   Future<void> upsertRemoteTasks(
     int userId,
     int projectId,
-    List<TaskModel> remoteTasks,
-  ) async {
-    final prefix = _projectPrefix(userId, projectId);
-    for (final key in HiveStorage.tasksBox.keys.toList()) {
-      if (key is! String || !key.startsWith(prefix)) continue;
-      final raw = HiveStorage.tasksBox.get(key);
-      if (raw is! Map) continue;
-      final record = LocalTaskRecord.fromJson(raw);
-      if (record.syncStatus == SyncStatus.synced) {
-        await HiveStorage.tasksBox.delete(key);
+    List<TaskModel> remoteTasks, {
+    Set<int> preserveSyncedTaskIds = const {},
+    bool reconcileDeletions = false,
+  }) async {
+    final remoteIds = remoteTasks.map((task) => task.id).toSet();
+
+    if (reconcileDeletions) {
+      for (final key in HiveStorage.tasksBox.keys.toList()) {
+        if (key is! String || !key.startsWith('t_')) continue;
+        final raw = HiveStorage.tasksBox.get(key);
+        if (raw is! Map) continue;
+        final record = LocalTaskRecord.fromJson(raw);
+        if (record.projectId != projectId) continue;
+        if (record.userId != userId && record.userId != 0) continue;
+        if (record.syncStatus == SyncStatus.synced &&
+            !remoteIds.contains(record.id) &&
+            !preserveSyncedTaskIds.contains(record.id)) {
+          await HiveStorage.tasksBox.delete(key);
+        }
       }
     }
 
     for (final model in remoteTasks) {
+      if (model.projectId != projectId) continue;
+      final existing = await getTask(userId, model.id);
+      if (existing != null && existing.syncStatus != SyncStatus.synced) {
+        continue;
+      }
       await saveTask(
-        LocalTaskRecord(
-          id: model.id,
-          title: model.title,
-          completed: model.completed,
-          projectId: model.projectId,
-          userId: model.userId,
-          status: model.status,
-          description: model.description,
-          priority: model.priority,
-          dueDate: model.dueDate,
-          syncStatus: SyncStatus.synced,
-        ),
+        LocalTaskRecord.fromRemote(model, userId: userId),
       );
     }
   }

@@ -15,6 +15,7 @@ abstract class ProjectsLocalDataSource {
     required int oldId,
     required LocalProjectRecord updatedProject,
   });
+  Future<Set<int>> expandProjectIds(int userId, int projectId);
   Future<void> upsertRemoteProjects(int userId, List<ProjectModel> remoteProjects);
   Future<void> clearUserData(int userId);
 }
@@ -27,6 +28,8 @@ class ProjectsLocalDataSourceImpl implements ProjectsLocalDataSource {
   String _userPrefix(int userId) => 'p_${userId}_';
 
   String _nextIdKey(int userId) => 'next_project_id_$userId';
+
+  String _projectMapKey(int userId, int oldId) => 'project_map_${userId}_$oldId';
 
   @override
   Future<List<LocalProjectRecord>> getProjects(int userId) async {
@@ -90,8 +93,31 @@ class ProjectsLocalDataSourceImpl implements ProjectsLocalDataSource {
     required int oldId,
     required LocalProjectRecord updatedProject,
   }) async {
+    await HiveStorage.metaBox.put(
+      _projectMapKey(userId, oldId),
+      updatedProject.id,
+    );
     await HiveStorage.projectsBox.delete(_key(userId, oldId));
     await saveProject(updatedProject);
+  }
+
+  @override
+  Future<Set<int>> expandProjectIds(int userId, int projectId) async {
+    final ids = <int>{projectId};
+    final project = await getProject(userId, projectId);
+    if (project != null) {
+      ids.add(project.id);
+    }
+
+    var current = projectId;
+    while (true) {
+      final mapped = HiveStorage.metaBox.get(_projectMapKey(userId, current));
+      if (mapped is! int) break;
+      ids.add(mapped);
+      current = mapped;
+    }
+
+    return ids;
   }
 
   @override

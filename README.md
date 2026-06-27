@@ -29,11 +29,16 @@ A Flutter task management app built with **Clean Architecture**, **BLoC** state 
 - **Offline write** — changes are saved locally and queued in a sync outbox
 - **Online write** — MockAPI is called immediately and the local cache is updated (hybrid model)
 - **Sync projects** — AppBar sync button on the projects screen pushes queued offline changes, remaps negative local IDs to server IDs, and pulls the latest remote data
+- **Local IDs** — offline-created projects/tasks use negative IDs until sync; after sync, IDs are remapped and project ID mappings are stored in Hive `meta_box`
+- **Task cache merge** — online refresh **merges** remote tasks into Hive without deleting pending or recently synced local tasks; sync pull **reconciles** deletions and preserves just-pushed task IDs when MockAPI GET lags behind POST
+- **Session-scoped tasks** — MockAPI task responses often omit `userId`; the app always stores tasks under the logged-in user's ID (and migrates legacy `userId: 0` entries on read)
 - **UX indicators** — offline banner, pending-change badge on the sync icon, sync disabled while offline
 
 Key implementation files:
 - [lib/core/network/connectivity_service.dart](lib/core/network/connectivity_service.dart)
+- [lib/features/projects/data/datasources/tasks_local_datasource.dart](lib/features/projects/data/datasources/tasks_local_datasource.dart)
 - [lib/features/projects/data/repositories/sync_repository_impl.dart](lib/features/projects/data/repositories/sync_repository_impl.dart)
+- [lib/features/projects/data/repositories/tasks_repository_impl.dart](lib/features/projects/data/repositories/tasks_repository_impl.dart)
 - [lib/features/projects/domain/usecases/sync_projects_usecase.dart](lib/features/projects/domain/usecases/sync_projects_usecase.dart)
 - [lib/features/projects/presentation/pages/projects_page.dart](lib/features/projects/presentation/pages/projects_page.dart)
 
@@ -337,7 +342,9 @@ Defined as a constant in [api_constants.dart](lib/core/network/api_constants.dar
 
 The projects Dio client treats HTTP status codes `< 500` as non-throwing responses.
 
-> **Offline note:** When the device is offline, create/update/delete operations are stored in Hive and queued for sync. After reconnecting, tap **Sync** in the projects AppBar to push pending changes to MockAPI.
+> **Offline note:** When the device is offline, create/update/delete operations are stored in Hive and queued for sync. After reconnecting, tap **Sync** in the projects AppBar to push pending changes to MockAPI, then reopen the project or pull-to-refresh the task list.
+
+> **MockAPI quirk:** Task `POST`/`GET` responses may omit `userId` (and may return numeric IDs as strings). The app normalizes these fields locally and does not rely on the API for ownership.
 
 ---
 
@@ -484,7 +491,7 @@ List all tasks for a project.
 ]
 ```
 
-**Edge cases:** `404` or a non-array response returns an empty list in the app.
+**Edge cases:** `404` or a non-array response returns an empty list in the app. The query param may not filter server-side; the app filters merged results by `projectId` locally.
 
 **curl example:**
 
@@ -528,7 +535,20 @@ Add a new task to a project.
 | `description` | string | Yes | `""` | Task description |
 | `dueDate` | int | Yes | current Unix timestamp | Due date (seconds) |
 
-**Success response (201):** Single task object (same shape as list item).
+**Success response (201):** Single task object. Example (note: `userId` is often absent):
+
+```json
+{
+  "id": "5",
+  "title": "New task",
+  "projectId": "1",
+  "completed": false,
+  "status": "Pending",
+  "priority": "Medium",
+  "description": "",
+  "dueDate": 1719494400
+}
+```
 
 **curl example:**
 
@@ -640,9 +660,9 @@ Local data is split across **SharedPreferences** (auth/profile/theme) and **Hive
 | Data | Box / scope | Source |
 |------|-------------|--------|
 | Projects per user | `projects_box` | [projects_local_datasource.dart](lib/features/projects/data/datasources/projects_local_datasource.dart) |
-| Tasks per user/project | `tasks_box` | [tasks_local_datasource.dart](lib/features/projects/data/datasources/tasks_local_datasource.dart) |
+| Tasks per user/project | `tasks_box` | [tasks_local_datasource.dart](lib/features/projects/data/datasources/tasks_local_datasource.dart) — keyed as `t_{userId}_{projectId}_{taskId}` |
 | Pending sync operations | `sync_queue_box` | [sync_queue_local_datasource.dart](lib/features/projects/data/datasources/sync_queue_local_datasource.dart) |
-| Local ID counters | `meta_box` | Negative IDs assigned to offline-created projects/tasks |
+| Local ID counters & project ID remap | `meta_box` | Negative IDs for offline creates; `project_map_{userId}_{oldId}` after sync remaps a local project ID to its server ID |
 
 Hive data is **cleared on logout** via [user_projects_storage_cleaner.dart](lib/features/projects/data/services/user_projects_storage_cleaner.dart) in [auth_repository_impl.dart](lib/features/auth/data/repositories/auth_repository_impl.dart).
 
@@ -756,6 +776,8 @@ flutter run
 flutter test
 ```
 
+Offline/sync cache behavior is covered in [test/tasks_local_datasource_test.dart](test/tasks_local_datasource_test.dart) (task merge, reconcile, ID remap, and `userId: 0` migration).
+
 > **Note:** [test/widget_test.dart](test/widget_test.dart) is still the default Flutter counter stub and does not yet test app features.
 
 ### Offline Sync Checklist
@@ -764,8 +786,10 @@ Manual verification steps for offline storage and sync:
 
 1. **Login online** — projects load from MockAPI and are cached in Hive
 2. **Airplane mode** — reopen the app; projects and tasks remain visible; create/edit/delete still works locally
-3. **Reconnect** — tap the **Sync** icon in the projects AppBar; pending changes upload and the badge clears
-4. **Logout** — local project/task data for that user is cleared
+3. **Offline task** — open a synced project, add a task while offline; it should appear immediately in the task list
+4. **Reconnect** — tap the **Sync** icon in the projects AppBar; pending changes upload and the badge clears
+5. **Verify tasks** — reopen the project or pull-to-refresh on the task list; offline-created tasks should remain visible and match MockAPI
+6. **Logout** — local project/task data for that user is cleared
 
 ### Build APK
 
@@ -783,9 +807,10 @@ flutter build apk --release
 - Dependency injection with GetIt
 - Dual-backend API integration (DummyJSON + MockAPI)
 - Bearer token auth with local session persistence
-- Hive-backed offline cache for projects and tasks
-- Hybrid online/offline writes with sync outbox
+- Hive-backed offline cache for projects and tasks with merge/reconcile sync strategy
+- Hybrid online/offline writes with sync outbox and local ID remapping
 - Manual Sync projects action with pending-change indicator
+- Resilient task cache (session `userId`, project ID aliases, non-destructive online refresh)
 - Responsive UI with light/dark theme support
 - Connectivity-aware repositories and reusable UI components
 
