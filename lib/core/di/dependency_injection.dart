@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import '../network/connectivity_service.dart';
 import '../network/dio_factory.dart';
 import '../network/token_provider.dart';
 import '../storage/local_storage.dart';
@@ -23,11 +24,17 @@ import '../../features/profile/domain/repositories/user_reader.dart';
 import '../../features/profile/domain/usecases/get_profile_usecase.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
 import '../../features/projects/data/datasources/dio_projects_client.dart';
+import '../../features/projects/data/datasources/projects_local_datasource.dart';
 import '../../features/projects/data/datasources/projects_remote_datasource.dart';
+import '../../features/projects/data/datasources/sync_queue_local_datasource.dart';
+import '../../features/projects/data/datasources/tasks_local_datasource.dart';
 import '../../features/projects/data/datasources/tasks_remote_datasource.dart';
 import '../../features/projects/data/repositories/projects_repository_impl.dart';
+import '../../features/projects/data/repositories/sync_repository_impl.dart';
 import '../../features/projects/data/repositories/tasks_repository_impl.dart';
+import '../../features/projects/data/services/user_projects_storage_cleaner.dart';
 import '../../features/projects/domain/repositories/projects_repository.dart';
+import '../../features/projects/domain/repositories/sync_repository.dart';
 import '../../features/projects/domain/repositories/tasks_repository.dart';
 import '../../features/projects/domain/usecases/add_task_usecase.dart';
 import '../../features/projects/domain/usecases/create_project_usecase.dart';
@@ -37,6 +44,7 @@ import '../../features/projects/domain/usecases/enrich_projects_with_status_usec
 import '../../features/projects/domain/usecases/get_project_tasks_usecase.dart';
 import '../../features/projects/domain/usecases/get_projects_usecase.dart';
 import '../../features/projects/domain/usecases/mark_task_done_usecase.dart';
+import '../../features/projects/domain/usecases/sync_projects_usecase.dart';
 import '../../features/projects/presentation/bloc/projects/projects_bloc.dart';
 import '../../features/projects/presentation/bloc/tasks/tasks_bloc.dart';
 import '../../features/theme/data/datasources/theme_local_datasource.dart';
@@ -60,6 +68,7 @@ Future<void> setupDependencies() async {
   );
 
   // ─── Network ───────────────────────────────────────────────────────────
+  sl.registerLazySingleton<ConnectivityService>(() => ConnectivityServiceImpl());
   sl.registerLazySingleton<TokenProvider>(
     () => SessionTokenProvider(sl()),
   );
@@ -86,6 +95,7 @@ Future<void> setupDependencies() async {
     () => AuthRepositoryImpl(
       remoteDataSource: sl(),
       localDataSource: sl(),
+      userProjectsStorageCleaner: sl(),
     ),
   );
 
@@ -132,6 +142,15 @@ Future<void> setupDependencies() async {
   );
 
   // ─── Projects DataSources ──────────────────────────────────────────────
+  sl.registerLazySingleton<ProjectsLocalDataSource>(
+    () => ProjectsLocalDataSourceImpl(),
+  );
+  sl.registerLazySingleton<TasksLocalDataSource>(
+    () => TasksLocalDataSourceImpl(),
+  );
+  sl.registerLazySingleton<SyncQueueLocalDataSource>(
+    () => SyncQueueLocalDataSourceImpl(),
+  );
   sl.registerLazySingleton(
     () => DioProjectsClient(sl(instanceName: 'projectsDio')),
   );
@@ -143,11 +162,41 @@ Future<void> setupDependencies() async {
   );
 
   // ─── Projects Repositories ─────────────────────────────────────────────
+  sl.registerLazySingleton<UserProjectsStorageCleaner>(
+    () => UserProjectsStorageCleaner(
+      projectsLocalDataSource: sl(),
+      tasksLocalDataSource: sl(),
+      syncQueueLocalDataSource: sl(),
+    ),
+  );
   sl.registerLazySingleton<ProjectsRepository>(
-    () => ProjectsRepositoryImpl(remoteDataSource: sl()),
+    () => ProjectsRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      syncQueueLocalDataSource: sl(),
+      connectivityService: sl(),
+      sessionStorage: sl(),
+    ),
   );
   sl.registerLazySingleton<TasksRepository>(
-    () => TasksRepositoryImpl(remoteDataSource: sl()),
+    () => TasksRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      projectsLocalDataSource: sl(),
+      syncQueueLocalDataSource: sl(),
+      connectivityService: sl(),
+      sessionStorage: sl(),
+    ),
+  );
+  sl.registerLazySingleton<SyncRepository>(
+    () => SyncRepositoryImpl(
+      projectsRemoteDataSource: sl(),
+      tasksRemoteDataSource: sl(),
+      projectsLocalDataSource: sl(),
+      tasksLocalDataSource: sl(),
+      syncQueueLocalDataSource: sl(),
+      connectivityService: sl(),
+    ),
   );
 
   // ─── Projects Use Cases ────────────────────────────────────────────────
@@ -161,6 +210,8 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton(() => AddTaskUseCase(sl()));
   sl.registerLazySingleton(() => MarkTaskDoneUseCase(sl()));
   sl.registerLazySingleton(() => DeleteTaskUseCase(sl()));
+  sl.registerLazySingleton(() => SyncProjectsUseCase(sl()));
+  sl.registerLazySingleton(() => GetPendingSyncCountUseCase(sl()));
 
   // ─── Projects BLoC ─────────────────────────────────────────────────────
   sl.registerFactory(
@@ -169,6 +220,9 @@ Future<void> setupDependencies() async {
       createProjectUseCase: sl(),
       deleteProjectUseCase: sl(),
       getCurrentUserIdUseCase: sl(),
+      syncProjectsUseCase: sl(),
+      getPendingSyncCountUseCase: sl(),
+      connectivityService: sl(),
     ),
   );
 

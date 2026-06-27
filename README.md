@@ -1,8 +1,8 @@
 # Task Manager
 
-A Flutter task management app built with **Clean Architecture**, **BLoC** state management, and modern Flutter practices. It authenticates users via [DummyJSON](https://dummyjson.com), manages projects and tasks via [MockAPI](https://mockapi.io), and persists sessions locally with SharedPreferences.
+A Flutter task management app built with **Clean Architecture**, **BLoC** state management, and modern Flutter practices. It authenticates users via [DummyJSON](https://dummyjson.com), manages projects and tasks via [MockAPI](https://mockapi.io) with **offline-first hybrid sync**, persists auth sessions via SharedPreferences, and caches projects/tasks locally with Hive.
 
-**Tech stack:** Flutter · Dio · GetIt · GoRouter · flutter_bloc · SharedPreferences · ScreenUtil
+**Tech stack:** Flutter · Dio · GetIt · GoRouter · flutter_bloc · SharedPreferences · Hive · ScreenUtil
 
 ---
 
@@ -24,6 +24,19 @@ A Flutter task management app built with **Clean Architecture**, **BLoC** state 
 - Mark tasks as done
 - Delete tasks via swipe actions (`flutter_slidable`)
 
+### Offline and Sync
+- **Offline read** — projects and tasks load from Hive cache when the network is unavailable
+- **Offline write** — changes are saved locally and queued in a sync outbox
+- **Online write** — MockAPI is called immediately and the local cache is updated (hybrid model)
+- **Sync projects** — AppBar sync button on the projects screen pushes queued offline changes, remaps negative local IDs to server IDs, and pulls the latest remote data
+- **UX indicators** — offline banner, pending-change badge on the sync icon, sync disabled while offline
+
+Key implementation files:
+- [lib/core/network/connectivity_service.dart](lib/core/network/connectivity_service.dart)
+- [lib/features/projects/data/repositories/sync_repository_impl.dart](lib/features/projects/data/repositories/sync_repository_impl.dart)
+- [lib/features/projects/domain/usecases/sync_projects_usecase.dart](lib/features/projects/domain/usecases/sync_projects_usecase.dart)
+- [lib/features/projects/presentation/pages/projects_page.dart](lib/features/projects/presentation/pages/projects_page.dart)
+
 ### Profile
 - Display user information
 - Local profile cache with remote refresh via `GET /auth/me`
@@ -35,13 +48,13 @@ A Flutter task management app built with **Clean Architecture**, **BLoC** state 
 - Responsive layout (`flutter_screenutil`)
 - Loading skeletons (`skeletonizer`)
 - Network image caching (`cached_network_image`)
-- Internet connection monitoring (`internet_connection_checker_plus`)
+- Connectivity-aware repositories and sync via `ConnectivityService` (`internet_connection_checker_plus`)
 
 ---
 
 ## Architecture
 
-The app follows **Clean Architecture** with three layers per feature:
+The app follows **Clean Architecture** with three layers per feature. Auth, profile, and theme use SharedPreferences for local persistence; projects and tasks use Hive with a hybrid online/offline repository pattern.
 
 | Layer | Responsibility |
 |-------|----------------|
@@ -51,13 +64,16 @@ The app follows **Clean Architecture** with three layers per feature:
 
 ```mermaid
 flowchart TB
-  UI[Pages and Widgets] --> BLoC[BLoC / Cubit]
+  UI[ProjectsPage] --> BLoC[ProjectsBloc]
   BLoC --> UseCase[Use Cases]
-  UseCase --> Repo[Repository Interface]
-  Repo --> RepoImpl[Repository Implementation]
-  RepoImpl --> LocalDS[Local DataSource]
-  RepoImpl --> RemoteDS[Remote DataSource]
-  RemoteDS --> API[REST APIs]
+  UseCase --> Repo[Repository Impl]
+  Repo --> LocalDS[Hive Local DataSource]
+  Repo --> RemoteDS[MockAPI Remote DataSource]
+  Repo --> Conn[ConnectivityService]
+  BLoC --> SyncUC[SyncProjectsUseCase]
+  SyncUC --> Queue[SyncQueueLocalDataSource]
+  SyncUC --> RemoteDS
+  SyncUC --> LocalDS
 ```
 
 **Key files:**
@@ -65,6 +81,8 @@ flowchart TB
 - [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart) — GoRouter routes and auth redirects
 - [lib/core/network/dio_factory.dart](lib/core/network/dio_factory.dart) — Dio clients and Bearer token interceptor
 - [lib/core/network/api_constants.dart](lib/core/network/api_constants.dart) — Base URLs and endpoint paths
+- [lib/core/network/connectivity_service.dart](lib/core/network/connectivity_service.dart) — Online/offline detection
+- [lib/core/storage/hive_storage.dart](lib/core/storage/hive_storage.dart) — Hive box initialization
 
 ---
 
@@ -76,9 +94,9 @@ lib/
 │   ├── constants/       # App-wide configuration
 │   ├── di/              # Dependency injection (GetIt)
 │   ├── errors/          # Exceptions and failures
-│   ├── network/         # Dio factory, API constants, error mapping
+│   ├── network/         # Dio factory, API constants, connectivity service
 │   ├── routes/          # GoRouter configuration
-│   ├── storage/         # SharedPreferences wrappers
+│   ├── storage/         # SharedPreferences wrappers, Hive storage
 │   ├── theme/           # Light/dark themes and extensions
 │   ├── utils/           # Validators, safe_call, snackbar helpers
 │   └── widgets/         # Reusable UI components
@@ -86,7 +104,14 @@ lib/
 ├── features/
 │   ├── auth/            # Login, register, session management
 │   ├── profile/         # User profile display
-│   ├── projects/        # Projects + tasks (projects_bloc, tasks_bloc)
+│   ├── projects/        # Projects + tasks, offline cache, sync
+│   │   ├── data/
+│   │   │   ├── datasources/   # Remote, local (Hive), sync queue
+│   │   │   ├── models/        # API models, local records, sync entries
+│   │   │   ├── repositories/  # Hybrid repos + sync_repository_impl
+│   │   │   └── services/      # user_projects_storage_cleaner
+│   │   ├── domain/            # Entities, use cases (incl. sync)
+│   │   └── presentation/      # projects_bloc, tasks_bloc, pages
 │   └── theme/           # Theme mode persistence
 │
 └── main.dart
@@ -311,6 +336,8 @@ Defined as a constant in [api_constants.dart](lib/core/network/api_constants.dar
 - [lib/features/projects/data/datasources/dio_projects_client.dart](lib/features/projects/data/datasources/dio_projects_client.dart)
 
 The projects Dio client treats HTTP status codes `< 500` as non-throwing responses.
+
+> **Offline note:** When the device is offline, create/update/delete operations are stored in Hive and queued for sync. After reconnecting, tap **Sync** in the projects AppBar to push pending changes to MockAPI.
 
 ---
 
@@ -597,7 +624,9 @@ curl -X DELETE https://6a3e00650443193a1a0b4a35.mockapi.io/projects/1/tasks/1
 
 ### Local Storage (No REST API)
 
-The following data is persisted locally via SharedPreferences and is **not** backed by REST endpoints:
+Local data is split across **SharedPreferences** (auth/profile/theme) and **Hive** (projects/tasks/sync queue). None of this is backed by dedicated REST endpoints.
+
+#### SharedPreferences
 
 | Data | Storage key area | Source |
 |------|------------------|--------|
@@ -605,6 +634,17 @@ The following data is persisted locally via SharedPreferences and is **not** bac
 | User ID | Session storage | Saved on login/register |
 | Profile cache | Profile local datasource | [profile_local_datasource.dart](lib/features/profile/data/datasources/profile_local_datasource.dart) |
 | Theme mode | Theme storage | [theme_local_datasource.dart](lib/features/theme/data/datasources/theme_local_datasource.dart) |
+
+#### Hive
+
+| Data | Box / scope | Source |
+|------|-------------|--------|
+| Projects per user | `projects_box` | [projects_local_datasource.dart](lib/features/projects/data/datasources/projects_local_datasource.dart) |
+| Tasks per user/project | `tasks_box` | [tasks_local_datasource.dart](lib/features/projects/data/datasources/tasks_local_datasource.dart) |
+| Pending sync operations | `sync_queue_box` | [sync_queue_local_datasource.dart](lib/features/projects/data/datasources/sync_queue_local_datasource.dart) |
+| Local ID counters | `meta_box` | Negative IDs assigned to offline-created projects/tasks |
+
+Hive data is **cleared on logout** via [user_projects_storage_cleaner.dart](lib/features/projects/data/services/user_projects_storage_cleaner.dart) in [auth_repository_impl.dart](lib/features/auth/data/repositories/auth_repository_impl.dart).
 
 ---
 
@@ -642,6 +682,8 @@ go_router: ^17.3.0
 
 ```yaml
 shared_preferences: ^2.5.5
+hive: ^2.2.3
+hive_flutter: ^1.1.0
 ```
 
 ### UI & Responsive Design
@@ -661,6 +703,8 @@ flutter_launcher_icons: ^0.14.4
 ```yaml
 internet_connection_checker_plus: ^3.1.0
 ```
+
+Used by [connectivity_service.dart](lib/core/network/connectivity_service.dart) to drive hybrid online/offline repository behavior and the Sync projects action.
 
 ### Dev Dependencies
 
@@ -714,6 +758,15 @@ flutter test
 
 > **Note:** [test/widget_test.dart](test/widget_test.dart) is still the default Flutter counter stub and does not yet test app features.
 
+### Offline Sync Checklist
+
+Manual verification steps for offline storage and sync:
+
+1. **Login online** — projects load from MockAPI and are cached in Hive
+2. **Airplane mode** — reopen the app; projects and tasks remain visible; create/edit/delete still works locally
+3. **Reconnect** — tap the **Sync** icon in the projects AppBar; pending changes upload and the badge clears
+4. **Logout** — local project/task data for that user is cleared
+
 ### Build APK
 
 ```bash
@@ -730,8 +783,11 @@ flutter build apk --release
 - Dependency injection with GetIt
 - Dual-backend API integration (DummyJSON + MockAPI)
 - Bearer token auth with local session persistence
+- Hive-backed offline cache for projects and tasks
+- Hybrid online/offline writes with sync outbox
+- Manual Sync projects action with pending-change indicator
 - Responsive UI with light/dark theme support
-- Network monitoring and reusable UI components
+- Connectivity-aware repositories and reusable UI components
 
 ---
 

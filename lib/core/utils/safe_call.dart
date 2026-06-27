@@ -10,5 +10,7 @@ Future<T> safeCall<T>(Future<T> Function() action) async {
     throw ServerFailure(e.message);
   } on CacheException catch (e) {
     throw CacheFailure(e.message);
+  } on NetworkException catch (e) {
+    throw NetworkFailure(e.message);
   }
 }

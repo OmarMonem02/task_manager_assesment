@@ -30,3 +30,5 @@ class DeleteProjectRequested extends ProjectsEvent {
   @override
   List<Object?> get props => [projectId];
 }
+
+class SyncProjectsRequested extends ProjectsEvent {}

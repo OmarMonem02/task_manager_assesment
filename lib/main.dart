@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'core/di/dependency_injection.dart';
+import 'core/storage/hive_storage.dart';
 import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/theme/presentation/cubit/theme_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await HiveStorage.init();
   await setupDependencies();
   final themeCubit = sl<ThemeCubit>();
   await themeCubit.loadTheme();

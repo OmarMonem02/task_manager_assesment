@@ -42,6 +42,14 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
       _currentTasks = tasks;
       emit(TasksLoaded(tasks));
     } on ServerFailure catch (e) {
+      try {
+        final tasks = await _getProjectTasksUseCase(event.projectId);
+        if (tasks.isNotEmpty) {
+          _currentTasks = tasks;
+          emit(TasksLoaded(tasks));
+          return;
+        }
+      } catch (_) {}
       emit(TasksError(e.message));
     } catch (_) {
       emit(const TasksError('Failed to load tasks'));

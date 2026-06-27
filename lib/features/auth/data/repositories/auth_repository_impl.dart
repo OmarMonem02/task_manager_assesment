@@ -1,4 +1,5 @@
 import '../../../../core/utils/safe_call.dart';
+import '../../../projects/data/services/user_projects_storage_cleaner.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_datasource.dart';
@@ -9,11 +10,14 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
     required AuthRemoteDataSource remoteDataSource,
     required AuthLocalDataSource localDataSource,
+    required UserProjectsStorageCleaner userProjectsStorageCleaner,
   })  : _remoteDataSource = remoteDataSource,
-        _localDataSource = localDataSource;
+        _localDataSource = localDataSource,
+        _userProjectsStorageCleaner = userProjectsStorageCleaner;
 
   final AuthRemoteDataSource _remoteDataSource;
   final AuthLocalDataSource _localDataSource;
+  final UserProjectsStorageCleaner _userProjectsStorageCleaner;
 
   Future<UserEntity> _persistAuthSession(UserModel user) async {
     await _localDataSource.saveTokens(
@@ -68,6 +72,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
+    final userId = await _localDataSource.getUserId();
+    if (userId != null) {
+      await _userProjectsStorageCleaner.clearUserData(userId);
+    }
     await _localDataSource.clearTokens();
   }
 
